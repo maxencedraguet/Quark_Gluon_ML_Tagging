@@ -6,4 +6,5 @@ PyTorch should be appropriate to implement all considered network implementation
 * Convolutional Neural Network ([CNN](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html))
 * Variational Autoencoders ([VAE](https://pyro.ai/examples/vae.html))
 * Generative Adversarial Networks ([GAN](https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html))
+
 A larger list of tutorials for [PyTorch](https://pytorch.org/tutorials/). 
