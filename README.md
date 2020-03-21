@@ -1,4 +1,5 @@
-# Quark-Gluon Tagging with Machine Learning for the ATLAS Experiment
+# Quark-Gluon Tagging with Machine Learning 
+# The ATLAS Experiment
 ## Meetings
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
 
