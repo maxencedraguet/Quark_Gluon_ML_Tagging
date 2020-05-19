@@ -7,6 +7,9 @@
 
 [Note on Readings.](https://docs.google.com/document/d/1u7orIhStgtNy6GY1Ix_eOC2UjRiMTey7CkkDW5u7Oxg/edit?usp=sharing)
 
+## Work
+[Notes on Work Progress.](https://docs.google.com/document/d/1REFWLDmTNmnLVJMIwqeWt13o8EeNrBTAoQybtgy6I2A/edit?usp=sharing)
+
 PyTorch should be appropriate to implement all considered network implementations and exploit GPU's. In particular:
 * Convolutional Neural Network ([CNN](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html))
 * Variational Autoencoders ([VAE](https://pyro.ai/examples/vae.html))
