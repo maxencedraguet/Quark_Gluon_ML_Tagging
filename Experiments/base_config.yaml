@@ -1,0 +1,15 @@
+experiment_name:                    test                      # Experiment name.
+use_gpu:                            False                     # Use a GPU if available.
+seed:                               1                         # Random seed to ensure reproducibility.
+relative_data_path:                 ../Data/Set1/             # Path to the dataset directory.
+experiment_type:                    BDT                       # Model to implement (BDT, ...)
+dataset:                            Set1                      # Data to use
+save_model:                         True                      # Whether to save the model or not
+
+BDT_model:                                                    # For AdaBoostClassifier of sklearn
+    test_size:                      0.2                       # Fraction of data to use for test
+    n_estim:                        50                        # Number of estimators
+    base_estimator:                 DecisionTreeClassifier    # Base type of estimators
+    max_depth:                      3                         # Maximal dept of the base estimator (decision tree)
+    lr:                             1                         # Learning rate
+    grid_search:                    False                     # Whether to perform grid search
