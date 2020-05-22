@@ -17,4 +17,3 @@ PyTorch should be appropriate to implement all considered network implementation
 * Generative Adversarial Networks ([GAN](https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html))
 
 A larger list of tutorials for [PyTorch](https://pytorch.org/tutorials/). 
-
