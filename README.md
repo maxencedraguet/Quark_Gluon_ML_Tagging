@@ -1,6 +1,6 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
-### Recent progresses: 
+### Recent progress: 
 * Worked on the dataloader, processing and formatting for the entire database. Had to trim a 2.2 TB to about 17 GB. This is implemented in the /DataLoader/UpRootTransformer.py file of the repo.
 * Adapted to processing steps from Aaron’s code and slightly-optimised it. A lot of iteration were required to account for many bugs (empty datasets, cuts having the wrong effect, etc.).
 * In order to achieve the data processing, we had no choice but to move to HDCondor. This required a lot of effort to make the entire code run. We managed to find a surprisingly succinct way of performing this. The big advantage is that the method is general enough to run any variant of the code. Implemented in the job_submitter.submit and Submitter_Condor.py files of /Experiments/
