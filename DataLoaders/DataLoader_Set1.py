@@ -27,10 +27,10 @@ from sklearn.model_selection import train_test_split
 
 class DataLoader_Set1(_BaseDataLoader):
     def __init__(self, config: Dict) -> None:
-        self.extract_parameters()
+        self.extract_parameters(config)
 
     def extract_parameters(self, config: Dict):
-        self.data_path = config.get(["relative_data_path"])
+        self.data_path = config.get(["absolute_data_path"])
         self.seed = config.get(["seed"])
         self.test_size = config.get(["BDT_model", "test_size"])
     
@@ -39,12 +39,13 @@ class DataLoader_Set1(_BaseDataLoader):
         Opens the csv file, takes the data, and return its separation in train/test.
         """
         print("Start Reading Data")
-        input_file = self.data_path + "user.aoneill.21148352.NTUP._000050.root_all.csv"
-        data_input = np.loadtxt(fname = input_file, delimiter=',', skiprows=1, max_rows = 100)# MODIFY max_rows = 100000
+        input_file = os.path.join(self.data_path, 'user.aoneill.21148352.NTUP._000050.root_all.csv')
+        data_input = np.loadtxt(fname = input_file, delimiter=',', skiprows=1)#, max_rows = 100)# MODIFY max_rows = 100000
         data_output = data_input[:, 18]
         input_train, input_test, output_train, output_test = train_test_split(data_input,
                                                                               data_output,
-                                                                              test_size = self.test_size)
+                                                                              test_size = self.test_size,
+                                                                              random_state = self.seed)
         print("Train")
         self.analyse_dataset(output_train)
         print("Test")

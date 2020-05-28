@@ -1,16 +1,20 @@
 #############################################################################
 #
-# DataLoader_Set1.py
+# DataLoader_Set2.py
 #
-# A data loader for the first set of data: Set1. This one requires a CSV.
+# A data loader for the second set of data: Set2. This one requires a HDF5 file.
 #
-# Data from: /data/atlas/atlasdata3/xAOD/MultiJets/NTuples/20200506_qgTaggingSystematics/
-# Data produced by: Aaron O'Neill.
+# Data from:  /data/atlas/atlasdata3/mdraguet/Set2/HF/
+# Data produced by Aaron O'Neill and processed by Maxence Draguet.
 #
-# Author -- Maxence Draguet (19/05/2020)
+# Author -- Maxence Draguet (27/05/2020)
 #
-# This loader takes directly the root files and convert them into the expected
-# format using UpRoot. It does not limit itself to the "...all.csv".
+# This loader takes directly the combined and processed root files  stored in a HDF5 file
+# and convert them into the expected format.
+#
+#['jetPt', 'jetEta', 'jetPhi', 'jetMass', 'jetEnergy', 'jetEMFrac', 'jetHECFrac', 'jetChFrac',
+# 'jetNumTrkPt500', 'jetNumTrkPt1000', 'jetTrackWidthPt500', 'jetTrackWidthPt1000', 'jetSumTrkPt500',
+# 'jetSumTrkPt1000', 'partonIDs', 'BDTScore', 'isTruthQuark', 'isBDTQuark', 'isnTrkQuark']
 #
 #############################################################################
 import os
@@ -22,37 +26,81 @@ from .BaseDataLoader import _BaseDataLoader
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import scale
 
 class DataLoader_Set2(_BaseDataLoader):
     def __init__(self, config: Dict) -> None:
-        self.data_path = config.get(["relative_data_path"])
+        self.extract_parameters(config)
+    
+    def extract_parameters(self, config: Dict):
+        self.data_path = config.get(["absolute_data_path"])
         self.seed = config.get(["seed"])
+        self.fraction_data = config.get(["fraction_data"])
+        self.equilibrate_bool = config.get(["equilibrate_data"])
+        
         self.test_size = config.get(["BDT_model", "test_size"])
-
+ 
     def load_separate_data(self):
         """
-        Opens the csv file, takes the data, and return its separation in train/test.
+        Opens the h5 file, takes the data, and return its separation in train/test.
         """
         print("Start reading data")
-        input_file = self.data_path + "user.aoneill.21148352.NTUP._000050.root_all.csv"
-        data_input = np.loadtxt(fname = input_file, delimiter=',', skiprows=1, max_rows = 10000)# MODIFY
-        data_output = data_input[:, 18]
+        input_file = os.path.join(self.data_path, 'mc16aprocessed.h5')
+        self.store = pd.HDFStore(input_file, "r")
+        self.store_keys = self.store.keys()
+        data_input = pd.DataFrame()
+        
+        for key in self.store_keys:
+            data_input = data_input.append(self.store[key].sample(frac = self.fraction_data, random_state = self.seed))
+        self.store.close()
+        print("Initial state")
+        self.analyse_dataset(data_input[['isTruthQuark']])
+        if self.equilibrate_bool:
+            data_input = self.equilibrate(data_input)
+        print("\nEquilibrated state")
+        self.analyse_dataset(data_input[['isTruthQuark']])
+        data_output = data_input[['isTruthQuark']]
+
+        # Scale the inputs and restrict to training variables. Note that this outputs a numpy array
+        data_input = scale(data_input.loc[:,'jetPt':'jetSumTrkPt1000']) #
+        #print(pd.DataFrame.from_records(data_input).describe())
         input_train, input_test, output_train, output_test = train_test_split(data_input,
                                                                               data_output,
-                                                                              test_size = self.test_size)
-        # Limit to training information
-        input_train = input_train[:,2:15]
-        input_test  = input_test[:,2:15]
+                                                                              test_size = self.test_size,
+                                                                              random_state = self.seed)
+        print("\nTraining set")
+        self.analyse_dataset(output_train)
+        print("\nTesting set")
+        self.analyse_dataset(output_test)
+
+        output_train = output_train.values.ravel()
+        output_test = output_test.values.ravel()
         
         data = {}
         data["input_train"] = input_train
         data["input_test"] = input_test
         data["output_train"] = output_train
         data["output_test"] = output_test
-        #print(output_test)
-        #print(input_train)
+
         return data
-    
-    def list_input(self):
-        pass
+
+    def analyse_dataset(self, data)->None:
+        """
+        Return the fraction of true quark jet in the dataset
+        """
+        reduced = data['isTruthQuark'].value_counts()
+        print("Number of quark = ", reduced[1])
+        print("Fraction of quark is: ", reduced[1]/(reduced[1] + reduced[0]))
+
+    def equilibrate(self, data):
+        """
+        Equilibrate the dataset to have the same number of occurence of 'isTruthQuark' for each class
+        """
+        number_q = data[data['isTruthQuark'] ==1]['isTruthQuark'].count()
+        number_g = data[data['isTruthQuark'] ==0]['isTruthQuark'].count()
+        minimum = min(number_g, number_q)
+
+        data_q = data[data['isTruthQuark'] ==1].sample(n = minimum, random_state = self.seed)
+        data_g = data[data['isTruthQuark'] ==0].sample(n = minimum, random_state = self.seed)
+        return data_g.append(data_q)
 
