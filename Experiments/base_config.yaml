@@ -1,10 +1,21 @@
 experiment_name:                    test                      # Experiment name.
 use_gpu:                            False                     # Use a GPU if available.
 seed:                               1                         # Random seed to ensure reproducibility.
-relative_data_path:                 ../Data/Set1/             # Path to the dataset directory.
-experiment_type:                    BDT                       # Model to implement (BDT, ...)
-dataset:                            Set1                      # Data to use
-save_model:                         True                      # Whether to save the model or not
+dataset:                            Set2                      # Data to use (Set1, Set2, ...)
+
+# Path to the dataset directory.
+absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set2/HF/
+    # For Set 1: a directory with the CSV for test (all ttbar)
+    # For Set 2: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set2/HF/
+    # For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set2/loader_list.txt
+fraction_data:                      0.2                       # Fraction of the data to load.
+equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
+
+# Model to implement (BDT, ...) or method to run (UpRootTransformer, ...)
+experiment_type:                    BDT
+
+save_model:                         False                     # Whether to save the model or not
+diagnostic:                         False                     # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py)
 
 BDT_model:                                                    # For AdaBoostClassifier of sklearn
     test_size:                      0.2                       # Fraction of data to use for test
@@ -12,4 +23,10 @@ BDT_model:                                                    # For AdaBoostClas
     base_estimator:                 DecisionTreeClassifier    # Base type of estimators
     max_depth:                      3                         # Maximal dept of the base estimator (decision tree)
     lr:                             1                         # Learning rate
-    grid_search:                    False                     # Whether to perform grid search
+    grid_search:                    True                     # Whether to perform grid search
+
+
+UpRootTransformer:
+    save_path:                      /data/atlas/atlasdata3/mdraguet/Set2/    # where to store the result
+    to_CSV:                         False                                    # Save to CSV
+    to_HDF5:                        True                                     # Save to HDF5

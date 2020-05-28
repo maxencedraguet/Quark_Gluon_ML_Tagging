@@ -9,7 +9,7 @@
 #
 #############################################################################
 
-from Context import Models, Utils
+from Context import Models, Utils, DataLoaders
 
 import argparse
 import time
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # If need be, update the parameters from parser values
     if args.experiment_name:
         experiment_parameters._config["experiment_name"] = args.experiment_name
-
+    
     # Establish experiment archiving.
     exp_timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
     experiment_name = experiment_parameters.get("experiment_name")
@@ -56,7 +56,9 @@ if __name__ == "__main__":
     experiment_parameters._config["seed"] = seed_value
 
     # write copy of config_yaml in model_checkpoint_folder (also creating Results folder if necessary)
-    experiment_parameters.save_configuration(log_path)
+    # experiment_parameters.save_configuration(log_path)
 
     if experiment_parameters.get(["experiment_type"]) == "BDT":
         runner = Models.BDTRunner(config=experiment_parameters)
+    elif experiment_parameters.get(["experiment_type"]) == "UpRootTransformer":
+        runner = DataLoaders.UpRootTransformer(config=experiment_parameters)

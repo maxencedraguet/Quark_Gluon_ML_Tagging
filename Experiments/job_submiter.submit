@@ -1,0 +1,18 @@
+#######################################
+#
+# HTCondor Submit Description File.
+# Author: Aaron O'Neill (slightly adapted)
+# Date: 22/05/2020
+# Description: Submit the uproot to
+# csv conversion script.
+#######################################
+
+executable  = /home/draguet/QGdis/Code/Experiments/Submitter_Condor.py
+universe    = vanilla
+output      = /data/atlas/atlasdata3/mdraguet/results.output.$(ClusterId)
+error       = /data/atlas/atlasdata3/mdraguet/results.error.$(ClusterId)
+log         = /data/atlas/atlasdata3/mdraguet/results.log.$(ClusterId)
+request_cpus = 1
+request_memory = 4 GB
+queue 1
+
