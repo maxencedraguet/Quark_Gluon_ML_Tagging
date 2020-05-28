@@ -20,30 +20,28 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn import metrics
 
-from DataLoaders import DataLoader_Set1
+from DataLoaders import DataLoader_Set1, DataLoader_Set2
 from .BaseRunner import _BaseRunner
 
 class BDTRunner(_BaseRunner):
-    
-    def __init__(self, config: Dict):
-        
+    def __init__(self, config: Dict) -> None:
         self._extract_parameters(config)
         self.classifier = AdaBoostClassifier(n_estimators= self.n_estim,
                                         base_estimator= self.base_estimator,
                                         learning_rate= self.lr )
         self._setup_dataset(config)
-        """
+        
         if self.grid_search_bool:
             self.run_grid_search()
         else:
             self.run()
-        """
+
     def _extract_parameters(self, config: Dict) -> None:
         """
         Method to extract relevant parameters from config and make them attributes of this class
         """
         self.experiment_timestamp = config.get("experiment_timestamp")
-        self.relative_data_path = config.get(["relative_data_path"])
+        self.absolute_data_path = config.get(["absolute_data_path"])
         self.result_path = config.get(["log_path"])
         os.makedirs(self.result_path, exist_ok=True)
         self.dataset = config.get(["dataset"])
@@ -64,7 +62,9 @@ class BDTRunner(_BaseRunner):
     def _setup_dataset(self, config: Dict):
         if self.dataset == "Set1":
             self.dataloader = DataLoader_Set1(config)
-            self.data = self.dataloader.load_separate_data()
+        if self.dataset == "Set2":
+            self.dataloader = DataLoader_Set2(config)
+        self.data = self.dataloader.load_separate_data()
     
     def train(self):
         self.model = self.classifier.fit(self.data["input_train"], self.data["output_train"])
@@ -95,11 +95,14 @@ class BDTRunner(_BaseRunner):
         print("Start Grid Training")
         model =  AdaBoostClassifier(n_estimators= self.n_estim,
                                     base_estimator= DecisionTreeClassifier(),
-                                    learning_rate= self.lr )
-        parameters = {'n_estimators': (100, 200, 400, 600),
-                      'base_estimator__max_depth': (1, 2, 3),
-                      'learning_rate': (0.05, 0.1, 0.5, 0.75)}
-        self.grid_search = GridSearchCV(model, parameters, scoring = 'accuracy')
+                                    learning_rate= self.lr)
+
+        parameters = {'n_estimators': (100, 300, 500, 700),
+                      'base_estimator__max_depth': (2, 3, 4),
+                      'learning_rate': (0.25, 0.5, 0.75, 1)}
+
+        print("Start training")
+        self.grid_search = GridSearchCV(model, parameters, scoring = 'accuracy', n_jobs = -1)
         self.grid_search.fit(self.data["input_train"], self.data["output_train"])
         self.display_grid_search_result()
 
