@@ -4,6 +4,7 @@
 * Finished training and running the optimisation of the BDT: some statistical results obtained and the model is saved. 
 <img src="Readme_Result/confusion_matrix_normalised.png" width="300">
 <img src="Readme_Result/ROC_curve.png" width="300">
+Confusion Matrix | ROC Curve
 :-------------------------:|:-------------------------:
 ![Confusion matrix](Readme_Result/confusion_matrix_normalised.png) | ![ROC curve](Readme_Result/ROC_curve.png)
 * Implemented a neural network model using same variables as the BDT. 
