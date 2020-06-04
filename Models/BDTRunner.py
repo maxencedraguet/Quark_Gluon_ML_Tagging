@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 import os
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from typing import Dict
 from joblib import dump, load
 
@@ -22,21 +23,22 @@ from sklearn import metrics
 
 from DataLoaders import DataLoader_Set1, DataLoader_Set2
 from .BaseRunner import _BaseRunner
+from Utils import write_ROC_info
 
 class BDTRunner(_BaseRunner):
     def __init__(self, config: Dict) -> None:
-        self._extract_parameters(config)
+        self.extract_parameters(config)
         self.classifier = AdaBoostClassifier(n_estimators= self.n_estim,
                                         base_estimator= self.base_estimator,
                                         learning_rate= self.lr )
-        self._setup_dataset(config)
+        self.setup_dataset(config)
         
         if self.grid_search_bool:
             self.run_grid_search()
         else:
             self.run()
-
-    def _extract_parameters(self, config: Dict) -> None:
+        
+    def extract_parameters(self, config: Dict) -> None:
         """
         Method to extract relevant parameters from config and make them attributes of this class
         """
@@ -59,47 +61,89 @@ class BDTRunner(_BaseRunner):
     def checkpoint_df(self, step: int) -> None:
         raise NotImplementedError("Base class method")
     
-    def _setup_dataset(self, config: Dict):
-        if self.dataset == "Set1":
-            self.dataloader = DataLoader_Set1(config)
-        if self.dataset == "Set2":
-            self.dataloader = DataLoader_Set2(config)
-        self.data = self.dataloader.load_separate_data()
-    
-    def train(self):
+    def train(self)->None:
         self.model = self.classifier.fit(self.data["input_train"], self.data["output_train"])
-        self.data["training_output_predictions"] = self.model.predict(self.data["input_train"])
-        self.training_accuracy = metrics.accuracy_score(self.data["output_train"], self.data["training_output_predictions"])
+        self.data["training_predictions"] = self.model.predict(self.data["input_train"])
+        self.training_accuracy = metrics.accuracy_score(self.data["output_train"], self.data["training_predictions"])
     
-    def predict(self):
-        self.data["output_predictions"] = self.model.predict(self.data["input_test"])
-        self.accuracy = metrics.accuracy_score(self.data["output_test"], self.data["output_predictions"])
-        self.precision = metrics.average_precision_score(self.data["output_test"], self.data["output_predictions"])
-        self.confusion_matrix = metrics.confusion_matrix(self.data["output_test"], self.data["output_predictions"])
+    def test(self)->None:
+        self.data["test_predictions"] = self.model.predict(self.data["input_test"])
+        self.data["test_predictions_proba"] = self.model.predict_proba(self.data["input_test"])
+        self.accuracy = metrics.accuracy_score(self.data["output_test"], self.data["test_predictions"])
+        self.precision = metrics.average_precision_score(self.data["output_test"], self.data["test_predictions"])
+        #confusion_matrix = metrics.confusion_matrix(self.data["output_test"], self.data["test_predictions"])
+        self.assess()
+        with open(os.path.join(self.result_path, 'fit_result.txt'), 'w') as f:
+            f.write("The training accuracy obtained is: %s\n" % str(self.training_accuracy))
+            f.write("The test accuracy obtained is: %s\n" % str(self.accuracy))
+            f.write("The test precision obtained is: %s\n" % str(self.precision))
         print("The training accuracy obtained is ", self.training_accuracy)
         print("The test accuracy obtained is ", self.accuracy)
         print("The test precision obtained is ", self.precision)
+    
+    def assess(self)->None:
+        """
+        Produce some metric of the result:
+        - ROC curve (versus BDT furnished)
+        """
+        # Confusion Matrix
+        np.set_printoptions(precision=2)
+        plot_mat = metrics.plot_confusion_matrix(self.model, self.data["input_test"], self.data["output_test"],
+                                                 cmap=plt.cm.Blues)
+        plot_mat.ax_.set_title("Confusion Matrix BDT")
+        plt.savefig(os.path.join(self.result_path, 'confusion_matrix.png'))
+        plt.close()
+        
+        # Confusion Matrix Normalised
+        plot_mat_n = metrics.plot_confusion_matrix(self.model, self.data["input_test"], self.data["output_test"],
+                                                   cmap=plt.cm.Blues, normalize='true')
+        plot_mat_n.ax_.set_title("Confusion Matrix Normalised BDT")
+        plt.savefig(os.path.join(self.result_path, 'confusion_matrix_normalised.png'))
+        plt.close()
+        
+        # ROC curve
+        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba.txt'),
+                       self.data["output_test"], self.data["test_predictions_proba"][:,1])
+        self.data["output_test"], self.data["test_predictions_proba"][:,1]
+        false_pos_rate, true_pos_rate, thresholds = metrics.roc_curve(self.data["output_test"], self.data["test_predictions_proba"][:,1])
+        false_pos_rateBDT, true_pos_rateBDT, thresholdsBDT = metrics.roc_curve(self.data["output_test"], self.data["output_BDT_test"])
+        AUC_test = metrics.auc(false_pos_rate, true_pos_rate)
+        AUC_test_BDT = metrics.auc(false_pos_rateBDT, true_pos_rateBDT)
+        print("AUC on test set for own BDT is {0} and for given one {1}".format(AUC_test, AUC_test_BDT))
 
-    def run(self):
+        # Plot the ROC curve
+        plt.figure()
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.plot(false_pos_rateBDT, true_pos_rateBDT, label='BDT (area = {:.3f})'.format(AUC_test_BDT))
+        plt.plot(false_pos_rate, true_pos_rate, label='Own BDT (area = {:.3f})'.format(AUC_test))
+        plt.xlabel('False positive rate')
+        plt.ylabel('True positive rate')
+        plt.title('ROC Curves')
+        plt.legend(loc='best')
+        plt.savefig(os.path.join(self.result_path, 'ROC_curve.png'))
+        plt.close()
+        
+
+    def run(self)->None:
         print("Start Training")
         self.train()
         print("End Training")
-        self.predict()
+        self.test()
         if self.save_model_bool:
             self.save_model()
 
-    def run_grid_search(self):
+    def run_grid_search(self)->None:
         """
         Run a grid search on AdaBoostClassifier with decision tree
         """
         print("Start Grid Training")
         model =  AdaBoostClassifier(n_estimators= self.n_estim,
-                                    base_estimator= DecisionTreeClassifier(),
+                                    base_estimator= DecisionTreeClassifier(max_depth = self.max_depth),
                                     learning_rate= self.lr)
 
-        parameters = {'n_estimators': (100, 300, 500, 700),
-                      'base_estimator__max_depth': (2, 3, 4),
-                      'learning_rate': (0.25, 0.5, 0.75, 1)}
+        parameters = {'n_estimators': (325, 350, 375, 400),
+                      'learning_rate': (0.125, 0.15, 0.175, 0.2)}
+        #'base_estimator__max_depth': (2, 3, 4): 3 was found to almost always be better
 
         print("Start training")
         self.grid_search = GridSearchCV(model, parameters, scoring = 'accuracy', n_jobs = -1)
