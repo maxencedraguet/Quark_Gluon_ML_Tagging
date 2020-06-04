@@ -1,16 +1,24 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* Worked on the dataloader, processing and formatting for the entire database. Had to trim a 2.2 TB to about 17 GB. This is implemented in the /DataLoader/UpRootTransformer.py file of the repo.
-* Adapted to processing steps from Aaron’s code and slightly-optimised it. A lot of iteration were required to account for many bugs (empty datasets, cuts having the wrong effect, etc.).
-* In order to achieve the data processing, we had no choice but to move to HDCondor. This required a lot of effort to make the entire code run. We managed to find a surprisingly succinct way of performing this. The big advantage is that the method is general enough to run any variant of the code. Implemented in the job_submitter.submit and Submitter_Condor.py files of /Experiments/
-* Discussion on file store format. Requiring long-term, stable and robust storage for large data, we took the decision to opt for HDF5, which is particularly well suited for pandas and numpy. We eliminated ROOT as this would require a lot of processing to store and load. CSV was not optimal as size of storage and speed are bad. The data is stored on the ATLAS disk at /data/atlas/atlasdata3/mdraguet/Set2/HF
-* The data processing generated some diagnostic plots of the datasets (such as the number of true quark versus true gluon: isTruthQuark, …).
-* Implemented a dataloader for this new data with further care taken to stabilise the occurence of each particle. Problem: neither kera nor sklearn make Adaboost decision tree compatible with incremental learning. 
-* IN PROGRESS Ran the BDT on the whole training dataset with grid search. Optimising the result. 
-*  WAITING FOR PREVIOUS STEP: ran the BDT model found optimal on the whole dataset. Displayed some result statistics. 
-* Got access to the ATLAS resources (thank you Alan for your help).
-* The finer granularity dataset in light format for the next steps should be available, according to Aaron, early next week. If I have time, I will implement a NN model to classify. 
+* Finished training and running the optimisation of the BDT: some statistical results obtained and the model is saved. 
+![Confusion matrix](Readme_Result/confusion_matrix_normalised.png)
+![ROC curve](Readme_Result/ROC_curve.png)
+* Implemented a neural network model using same variables as the BDT. 
+** Worked on new NN runner (Model doc of git) and network.
+** Implemented some statistics gathering method to mix its result with the BDT.
+** Still need to carry out some hyperparameter optimisation (lots of freedom for the moment) and potentially upgrade the network: only using L2 for the moment. Adding dropout, batchnorm, ... ?
+**Implementing some logging, saving and checking tools (such as reporting values to tensorboard) that will be useful when implementing the full model. 
+* Worked on an efficient sampler using cross section: access to a dictionary implemented by Aaron using dsid (dataset id) file system. 
+*Worked on the new dataset: meeting with Aaron to discuss access to this. Problem is that it does not seem that simple to gather. *What we need appears however quite clearly:
+** Three datasets: one with quark-jet rich process, other with gluon rich process. The final one is a jet dataset collecting jet global variable (in order to run the benchmarked model on similar data). Both the quark and gluon tables should have an index pointing to the global jet in the jet table. 
+** For each of these jet in the quark-gluon tables (regardless of the type) info required is:
+*** Final states particles: their 4-momenta with enough info to get direction and apply anti-kT OR the calorimeter maps + potential tracker info from PFlow. The idea in any case is to build a factorisation tree based on some info: whether this is high-level (4 momenta) or low-level (calo-maps + PFlow) should not modify the model
+*** a jet index indicating the jet with it truth information in the jet table (as mentioned above)
+*** A notion of pile-up (particularly for the calo-maps: note that a CNN could be deployed to account for this in a first processing layer to build the anti-KT tree). 
+*** the energy and “rapidity” of the jet: this is particularly important as the Junipr implementation target a narrow range (500-550 GeV, |y| < 1.5).
+*** If several process are stored in the same quark- or gluon-rich dataset: something to distinguish them. 
+
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
 
