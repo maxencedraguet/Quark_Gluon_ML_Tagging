@@ -2,6 +2,8 @@
 ## Meetings
 ### Recent progress: 
 * Finished training and running the optimisation of the BDT: some statistical results obtained and the model is saved. 
+<img src="Readme_Result/confusion_matrix_normalised.png" width="100">
+<img src="Readme_Result/ROC_curve.png" width="100">
 ![Confusion matrix](Readme_Result/confusion_matrix_normalised.png) | ![ROC curve](Readme_Result/ROC_curve.png)
 * Implemented a neural network model using same variables as the BDT. 
 ** Worked on new NN runner (Model doc of git) and network.
