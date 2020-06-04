@@ -4,26 +4,42 @@ seed:                               1                         # Random seed to e
 dataset:                            Set2                      # Data to use (Set1, Set2, ...)
 
 # Path to the dataset directory.
+#   For Set 1: a directory with the CSV for test (all ttbar)
+#   For Set 2: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set2/HF/
+#   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set2/loader_list.txt
 absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set2/HF/
-    # For Set 1: a directory with the CSV for test (all ttbar)
-    # For Set 2: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set2/HF/
-    # For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set2/loader_list.txt
-fraction_data:                      0.2                       # Fraction of the data to load.
+fraction_data:                      0.1                       # Fraction of the data to load.
 equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
 
-# Model to implement (BDT, ...) or method to run (UpRootTransformer, ...)
-experiment_type:                    BDT
+# Model to implement (BDT, NN ...) or method to run (UpRootTransformer, ...)
+experiment_type:                    NN
 
-save_model:                         False                     # Whether to save the model or not
+save_model:                         True                      # Whether to save the model or not
 diagnostic:                         False                     # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py)
+
+NN_Model:
+    lr:                             0.001
+    lr_scheduler:                   True
+    epoch:                          100
+    batch_size:                     100
+    loss_function:                  BCE_log                   # Loss function to use: BCE_log (binary-cross entropy with logit), BCE (same without the sigmoid)
+    initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
+    optimiser:
+        type:                       adam
+        params:                     [0.9, 0.999, 0.0001]      # Parameters of the optimiser: this could be improved for this specific project
+        weight_decay:               0.01                      # Weight decay for L2 regularisation
+    NeuralNet:
+        input_dimensions:           [14, 64, 64, 1]
+        nonlinearity:               relu                      # relu, elu, tanh, sigmoid, identity
+        end_nonlinearity:           identity                  # relu, elu, tanh, sigmoid, identity
 
 BDT_model:                                                    # For AdaBoostClassifier of sklearn
     test_size:                      0.2                       # Fraction of data to use for test
-    n_estim:                        50                        # Number of estimators
+    n_estim:                        300                       # Number of estimators
     base_estimator:                 DecisionTreeClassifier    # Base type of estimators
     max_depth:                      3                         # Maximal dept of the base estimator (decision tree)
-    lr:                             1                         # Learning rate
-    grid_search:                    True                     # Whether to perform grid search
+    lr:                             0.15                      # Learning rate
+    grid_search:                    False                     # Whether to perform grid search
 
 
 UpRootTransformer:
