@@ -49,9 +49,13 @@ class DataLoader_Set2(_BaseDataLoader):
         self.store = pd.HDFStore(input_file, "r")
         self.store_keys = self.store.keys()
         data_input = pd.DataFrame()
-        
+        count = 0
         for key in self.store_keys:
+            count += 1
+            print('Count: {0}, key: {1}'.format(count, key))
             data_input = data_input.append(self.store[key].sample(frac = self.fraction_data, random_state = self.seed))
+                #if (count == 10):
+                #break
         self.store.close()
         print("Initial state")
         self.analyse_dataset(data_input[['isTruthQuark']])
@@ -60,12 +64,13 @@ class DataLoader_Set2(_BaseDataLoader):
         print("\nEquilibrated state")
         self.analyse_dataset(data_input[['isTruthQuark']])
         data_output = data_input[['isTruthQuark']]
-
+        data_output_BDT = data_input[['BDTScore']]* (-1) #Problem with the BDT values of Baltz: multiply by -1
         # Scale the inputs and restrict to training variables. Note that this outputs a numpy array
         data_input = scale(data_input.loc[:,'jetPt':'jetSumTrkPt1000']) #
         #print(pd.DataFrame.from_records(data_input).describe())
-        input_train, input_test, output_train, output_test = train_test_split(data_input,
+        input_train, input_test, output_train, output_test, BDT_output_train, BDT_output_test = train_test_split(data_input,
                                                                               data_output,
+                                                                              data_output_BDT,
                                                                               test_size = self.test_size,
                                                                               random_state = self.seed)
         print("\nTraining set")
@@ -81,7 +86,8 @@ class DataLoader_Set2(_BaseDataLoader):
         data["input_test"] = input_test
         data["output_train"] = output_train
         data["output_test"] = output_test
-
+        data["output_BDT_train"] = BDT_output_train
+        data["output_BDT_test"] = BDT_output_test
         return data
 
     def analyse_dataset(self, data)->None:
