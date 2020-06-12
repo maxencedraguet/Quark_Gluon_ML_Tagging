@@ -34,6 +34,7 @@
 
 ## Work
 [Notes on Work Progress.](https://docs.google.com/document/d/1REFWLDmTNmnLVJMIwqeWt13o8EeNrBTAoQybtgy6I2A/edit?usp=sharing)
+
 [Experiment Log.](https://docs.google.com/spreadsheets/d/1Yu8Fxa3OA3b5M0SDpXkCFffr_e0Qvg-HA2QqpyZvl-I/edit?usp=sharing)
 
 PyTorch should be appropriate to implement all considered network implementations and exploit GPU's. In particular:
