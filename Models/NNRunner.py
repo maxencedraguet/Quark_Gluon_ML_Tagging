@@ -19,13 +19,14 @@ from joblib import dump, load
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn import metrics
 
 from tensorboardX import SummaryWriter
 
 from DataLoaders import DataLoader_Set1, DataLoader_Set2
 from .BaseRunner import _BaseRunner
 from .Networks import NeuralNetwork
+from Utils import write_ROC_info, plot_confusion_matrix, ROC_curve_plotter_from_values
 
 class NNRunner(_BaseRunner):
 
@@ -64,7 +65,6 @@ class NNRunner(_BaseRunner):
         #if self.network_type = "neural_network":
         self.network = NeuralNetwork(config=config)
         self.last_non_lin = self.network.get_last_non_linearity()
-        print(self.last_non_lin)
         self.setup_loss(config=config)
 
     def setup_dataloader(self, config: Dict)->None:
@@ -72,12 +72,10 @@ class NNRunner(_BaseRunner):
         Set up the dataloader for PyTorch execution
         """
         self.setup_dataset(config) # mother class function.
-        #print(self.data["output_test"])
         self.data["input_train"]  = torch.Tensor(self.data["input_train"])
         self.data["input_test"]   = torch.Tensor(self.data["input_test"])
         self.data["output_train"] = torch.Tensor(self.data["output_train"])
         self.data["output_test"]  = torch.Tensor(self.data["output_test"])
-        #print(self.data["output_test"])
         # Train
         self.train_dataset = torch.utils.data.TensorDataset(self.data["input_train"], self.data["output_train"])
         self.train_dataloader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
@@ -91,7 +89,6 @@ class NNRunner(_BaseRunner):
             beta_1 = self.optimiser_params[0]
             beta_2 = self.optimiser_params[1]
             epsilon = self.optimiser_params[2]
-            print(self.network.parameters())
             self.optimiser = torch.optim.Adam(self.network.parameters(), lr=self.lr,
                                               betas=(beta_1, beta_2),eps=epsilon,
                                               weight_decay= self.weight_decay)
@@ -135,8 +132,8 @@ class NNRunner(_BaseRunner):
                 y_pred_tag = torch.round(torch.sigmoid(NN_output))
                 output_loss = self.loss(NN_output, batch_target.unsqueeze(1))
                 output_acc  = self.compute_accuracy(y_pred_tag, batch_target.unsqueeze(1))
-                epoch_loss += output_loss
-                epoch_acc  += output_acc
+                epoch_loss += output_loss.item()
+                epoch_acc  += output_acc.item()
                 
                 self.optimiser.zero_grad()
                 output_loss.backward()
@@ -145,15 +142,20 @@ class NNRunner(_BaseRunner):
                 # Report result to TensorBoard
                 self.writer.add_scalar("training_loss", float(output_loss), step_count)
                 self.writer.add_scalar("training_acc",  float(output_acc),  step_count)
+                #print("Training {} step | loss =  {} and accuracy = {}".format(step_count, float(output_loss), float(output_acc)))
+                
+                if (step_count% self.test_frequency == 0):
+                    print("Training {} step | loss =  {} and accuracy = {}".format(step_count, float(output_loss), float(output_acc)))
+                    self.test_loop(epoch=epoch, step=step_count)
+                    self.network.train()
                     
-            print("Training {} epochs | loss =  {} and accuracy = {}".format(epoch, float(output_loss), float(epoch_acc/len(self.train_dataloader))))
-            if (epoch% self.test_frequency == 0):
-                self.test_loop(epoch=epoch, step=step)
-                self.network.train()
+            print("Training {} epochs | loss =  {} and accuracy = {}".format(epoch, float(epoch_loss/len(self.train_dataloader)), float(epoch_acc/len(self.train_dataloader))))
+        
 
     def test_loop(self, epoch:int, step:int):
+        print("Start testing loop")
         self.network.eval()
-        y_pred_proba_list = []
+        y_pred_proba_list = []
         y_pred_list = []
         y_true_list = []
         with torch.no_grad():
@@ -169,13 +171,13 @@ class NNRunner(_BaseRunner):
             mean_loss     = output_loss / len(self.test_dataloader)
             mean_accuracy = output_acc  / len(self.test_dataloader)
             
-            print("testing {} epochs | loss =  {} and accuracy = {}".format(epoch, float(mean_loss), float(mean_accuracy)))
+            print("testing {} step | loss =  {} and accuracy = {}".format(step, float(mean_loss), float(mean_accuracy)))
             self.writer.add_scalar("test_loss", float(mean_loss),     step)
             self.writer.add_scalar("test_acc",  float(mean_accuracy), step)
     
     def test(self):
         self.network.eval()
-        y_pred_proba_list = []
+        y_pred_proba_list = []
         y_pred_list = []
         y_true_list = []
         with torch.no_grad():
@@ -202,7 +204,21 @@ class NNRunner(_BaseRunner):
         self.assess()
                 
     def assess(self):
-        print(classification_report(self.data["output_test"], self.data["test_predictions"]))
+        """
+        Runs some statistics gathering methods, storing results in the result_path given. 
+        """
+        print(metrics.classification_report(self.data["output_test"], self.data["test_predictions"]))
+        self.confusion_matrix = metrics.confusion_matrix(self.data["output_test"], self.data["test_predictions"])
+        plot_confusion_matrix(cm = self.confusion_matrix, normalize=True)
+        plt.savefig(os.path.join(self.result_path, 'confusion_matrix_normalised.png'))
+        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_NN.txt'),
+                       self.data["output_test"], self.data["test_predictions_proba"])
+        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_given_BDT.txt'),
+                        self.data["output_test"], self.data["output_BDT_test"]["BDTScore"])
+        
+        list_plot= [("NN", self.data["output_test"], self.data["test_predictions_proba"]),
+                    ("BDT", self.data["output_test"], self.data["output_BDT_test"]["BDTScore"])]
+        ROC_curve_plotter_from_values(list_plot, self.result_path)
     
     def compute_accuracy(self, y_pred, y_test):
         correct_results_sum = (y_pred == y_test).sum().float()
@@ -213,7 +229,5 @@ class NNRunner(_BaseRunner):
         self.train()
         self.test()
         if self.save_model_bool:
-            self.save_model()
+            self.network.save_model(self.result_path)
     
-    def save_model(self) -> None:
-        torch.save(self.state_dict(), os.path.join(self.result_path, 'saved_vae_weights.pt'))

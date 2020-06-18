@@ -84,6 +84,7 @@ class BDTRunner(_BaseRunner):
     def assess(self)->None:
         """
         Produce some metric of the result:
+        - Confusion Matrices (normalised and absolute)
         - ROC curve (versus BDT furnished)
         """
         # Confusion Matrix
@@ -102,9 +103,10 @@ class BDTRunner(_BaseRunner):
         plt.close()
         
         # ROC curve
-        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba.txt'),
+        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_BDT.txt'),
                        self.data["output_test"], self.data["test_predictions_proba"][:,1])
-        self.data["output_test"], self.data["test_predictions_proba"][:,1]
+        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_given_BDT.txt'),
+                        self.data["output_test"], self.data["output_BDT_test"])
         false_pos_rate, true_pos_rate, thresholds = metrics.roc_curve(self.data["output_test"], self.data["test_predictions_proba"][:,1])
         false_pos_rateBDT, true_pos_rateBDT, thresholdsBDT = metrics.roc_curve(self.data["output_test"], self.data["output_BDT_test"])
         AUC_test = metrics.auc(false_pos_rate, true_pos_rate)
@@ -114,8 +116,8 @@ class BDTRunner(_BaseRunner):
         # Plot the ROC curve
         plt.figure()
         plt.plot([0, 1], [0, 1], 'k--')
-        plt.plot(false_pos_rateBDT, true_pos_rateBDT, label='BDT (area = {:.3f})'.format(AUC_test_BDT))
-        plt.plot(false_pos_rate, true_pos_rate, label='Own BDT (area = {:.3f})'.format(AUC_test))
+        plt.plot(false_pos_rateBDT, true_pos_rateBDT, label='BDT (area = {:.4f})'.format(AUC_test_BDT))
+        plt.plot(false_pos_rate, true_pos_rate, label='Own BDT (area = {:.4f})'.format(AUC_test))
         plt.xlabel('False positive rate')
         plt.ylabel('True positive rate')
         plt.title('ROC Curves')
@@ -183,10 +185,10 @@ class BDTRunner(_BaseRunner):
         """
         Save the model in the Result folder using joblib
         """
-        dump(self.classifier, os.path.join(self.result_path, 'saved_model.joblib'))
+        dump(self.model, os.path.join(self.result_path, 'saved_model.joblib'))
 
     def load_model(self, model_path)->None:
         """
         Load a model from a model_path (must end by .joblib
         """
-        self.classifier = load('filename.joblib')
+        self.model = load('filename.joblib')
