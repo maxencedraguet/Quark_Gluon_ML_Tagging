@@ -19,12 +19,14 @@
     <p float="center">
     <img src="Readme_Result/ROC_curve_all_models.png" width="700" /> 
     </p>
+    
     * Weird observation: performance for BDT is uniform over labels (below left), but for NN gluons are systematically better reconstructed (observed from confusion matrix, one is deplayed here, right side).
 <p float="center">
 <img src="Readme_Result/confusion_matrixBDT.png" width="350" />
 <img src="Readme_Result/confusion_matrixNN.png" width="350" /> 
 </p>
 Both have run on Set3 with 1% of the test data (20% of whole data). 
+
 * Granular data: very problematic situation
     * I spent the entire week familiarising myself with ATLAS software and Athena. I read several rubrics, did the entire tutorial (on the event loop formalism) and read every single one of Aaron's athena code. Very hard to quickly implement something complete as the number of variables is significant, finding information and examples complicate and the target itself is not clear (to this day, I still do not precisely know where to get the calo info in the DAOD files ... ). And this is even before having run anything on the GRID to collect the whole of the data (only a fraction is on the server).
     * Had a meeting with Aaron on Thursday (he is quite busy at the moment and hasn't had a chance yet to go over the problem though he said he will be looking over this on Thursday). When I asked him how much should be implemented (referring to triggers, quality cuts, tools to reconstruct data, ...), we realised this might be overly complex for me to write myself with the little time available. I sent him a schema of the structure of the data I am hoping to collect to at least have something comparable to the Junipr framework (but at reconstructed level in ATLAS). 
