@@ -55,12 +55,19 @@ if __name__ == "__main__":
     torch.manual_seed(seed_value)
     experiment_parameters._config["seed"] = seed_value
 
-    # write copy of config_yaml in model_checkpoint_folder (also creating Results folder if necessary)
-    # experiment_parameters.save_configuration(log_path)
-
     if experiment_parameters.get(["experiment_type"]) == "BDT":
+        experiment_parameters.save_configuration(log_path)
         runner = Models.BDTRunner(config=experiment_parameters)
+
     elif experiment_parameters.get(["experiment_type"]) == "NN":
+        experiment_parameters.save_configuration(log_path)
         runner = Models.NNRunner(config=experiment_parameters)
+
+    elif experiment_parameters.get(["experiment_type"]) == "Multi_model":
+        runner =  Models.MultimodalRunner(config=experiment_parameters)
+
     elif experiment_parameters.get(["experiment_type"]) == "UpRootTransformer":
         runner = DataLoaders.UpRootTransformer(config=experiment_parameters)
+
+    elif experiment_parameters.get(["experiment_type"]) == "Train_Test_Separator":
+        runner = DataLoaders.Train_Test_Separator(config=experiment_parameters)

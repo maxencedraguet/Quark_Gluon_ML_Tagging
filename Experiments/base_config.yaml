@@ -6,12 +6,20 @@ dataset:                            Set2                      # Data to use (Set
 # Path to the dataset directory.
 #   For Set 1: a directory with the CSV for test (all ttbar)
 #   For Set 2: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set2/HF/
-#   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set2/loader_list.txt
-absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set2/HF/
-fraction_data:                      0.1                       # Fraction of the data to load.
+#   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [2 or 3] /loader_list.txt
+#   For Train_Test_Separator: the complete path to a h5 file to split into train-validation-test: /data/atlas/atlasdata3/mdraguet/Set2/HF/mc16aprocessed.h5
+absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set3/HF/
+fraction_data:                      0.01                       # Fraction of the data to load.
+test_size:                          0.2                       # Fraction of data to use for test
 equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
 
-# Model to implement (BDT, NN ...) or method to run (UpRootTransformer, ...)
+cross_section_sampler:                                        # A cross section sampler. Works with a file of cross section indexed by dsid: Backgrounds.txt
+    cs_based:                       False                     # Whether to use the cross section sampler of the direct one
+    n_samples:                      1000000                   # Number of samples demanded with the cross section sampler.
+                                                              #         The final number may differ: rare processes are at least sampled once (increase number)
+                                                              #         and if too many samples are asked, the demand is trimmed to what is available.
+
+# Model to implement (BDT, NN ...) or method to run (UpRootTransformer, Train_Test_Separator ...)
 experiment_type:                    NN
 
 save_model:                         True                      # Whether to save the model or not
@@ -20,29 +28,46 @@ diagnostic:                         False                     # For appropriate 
 NN_Model:
     lr:                             0.001
     lr_scheduler:                   True
-    epoch:                          100
-    batch_size:                     100
+    dropout_proba:                  0
+    epoch:                          2
+    batch_size:                     128
     loss_function:                  BCE_log                   # Loss function to use: BCE_log (binary-cross entropy with logit), BCE (same without the sigmoid)
     initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
+    test_frequency:                 100                       # Frequency of test error estimation during traing (for plotting purpose)
     optimiser:
         type:                       adam
-        params:                     [0.9, 0.999, 0.0001]      # Parameters of the optimiser: this could be improved for this specific project
-        weight_decay:               0.01                      # Weight decay for L2 regularisation
+        params:                     [0.9, 0.999, 0.00000001]  # Parameters of the optimiser: should be general enough but could be optimised.
+        weight_decay:               0.0000001                   # Weight decay for L2 regularisation
     NeuralNet:
-        input_dimensions:           [14, 64, 64, 1]
+        input_dimensions:           [14, 32, 32, 1]
         nonlinearity:               relu                      # relu, elu, tanh, sigmoid, identity
         end_nonlinearity:           identity                  # relu, elu, tanh, sigmoid, identity
 
 BDT_model:                                                    # For AdaBoostClassifier of sklearn
-    test_size:                      0.2                       # Fraction of data to use for test
     n_estim:                        300                       # Number of estimators
     base_estimator:                 DecisionTreeClassifier    # Base type of estimators
     max_depth:                      3                         # Maximal dept of the base estimator (decision tree)
     lr:                             0.15                      # Learning rate
     grid_search:                    False                     # Whether to perform grid search
 
+Multi_model:
+    # The list of models to assess in format (model_type, path_to_model, path_to_model_config.yaml, description_string)
+    # Model typ is NN or BDT; path_to_model_config.yaml is only necessary for NN; description_string is with "_" separator between words
+    # models:                         [[NN, /home/draguet/QGdis/Code/Experiments/store_model/saved_NN_weights.pt, /home/draguet/QGdis/Code/Experiments/store_model/config.yaml, NN_20_unit_hidden_2_epochs], [BDT, /home/draguet/QGdis/Code/Experiments/store_model/saved_model.joblib, /home/draguet/QGdis/Code/Experiments/store_model/config.yaml, BDT_model ]]
+    models:                         store_model2                 # name of directory with models and the models_to_load.py loader
+    data:
+        test_set_type:              regular                   # What sort of test data:
+                                    # regular refers to dataset, cs (cross-section based),
+                                    # energy (for energy_range specified) or process  (for files in process_list )
+        energy_range:               [0, 100]
+        process_list:               [None]
 
 UpRootTransformer:
-    save_path:                      /data/atlas/atlasdata3/mdraguet/Set2/    # where to store the result
+    save_path:                      /data/atlas/atlasdata3/mdraguet/Set3/    # where to store the result
     to_CSV:                         False                                    # Save to CSV
     to_HDF5:                        True                                     # Save to HDF5
+
+Train_Test_Separator:
+    save_path:                      /data/atlas/atlasdata3/mdraguet/Set3/HF/Separated/
+    test_size:                      0.2                                     # Fraction of the whole data to reserve for test
+    validation_size:                0.2                                     # Fraction of the whole data to reserve for validation
