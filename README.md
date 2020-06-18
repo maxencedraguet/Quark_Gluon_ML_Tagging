@@ -1,28 +1,33 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* Finished training and running the optimisation of the BDT: some statistical results obtained and the model is saved. 
+* Finished implementing a Neural Network runner (NNrunner).
+    * Optimised it.
+    * Tensorboard implementation with server running.
 
+* Implemented a train-validation-test separator with some data quality checks. (In DataLoaders)
+
+* Reprocessed the dataset set2 into a set3  (identical structure, some data was however missing as I found out in the previous step + some was incorrect, missing a r-tag). Store on server
+
+* Implemented intelligent loader (in DataSet2_loader):
+    * based on cross-section: problem here: the cross section of some process is incredibly small compared to other process. For example user.aoneill.202004281.mc16.361032.Py8EG_N23LO_jetjet_JZ12W.SUSY4.e3668_s3126_s3136_r9364_r9315_p3652_NTUP has a relative cross section of 6.4088763234695515e-18 ... to compare to /user.aoneill.202004281.mc16.361023.Py8EG_N23LO_jetjet_JZ3W.SUSY4.e3668_s3126_r9364_r9315_p3652_NTUP that accounts for almost 90 % of it ! So the sampler follows this relative cross section with at least one event for each signal. This means a vast majority of processes no longer contribute (only 8-9 of them had enough importance to be sampled more than once). This discrepency may explain why the given BDT performs less efficiently than the self trained one. 
+    * working on other ones based on energy and specific file.
+
+* Trained a variety of models and compared them.  
+    * Weird bug from Condor: for the NN family, it does not return some of the output file from the code nor the error and output file from the submission. No error is observed however (tensorboard shows result to the end) and eveything is produced as expected when running on ppxint. I saved all trained models. 
+    * A ROC curve comparison follows (mostly unreadable as performance seems to be equivalent accross models), as shown below on the right. All models beat the given BDT (since no cross section weight here). Own BDT and NN with weight decay = 0.000001 and [14, 32, 32, 1] (structure: 14 inputs to 2 32-unit hidden layers to a final one with sigmoid) and dropout probability of first layer at 0.1 seem to win.
+    * Weird observation: performance for BDT is uniform over labels, but for NN gluons are systematically better reconstructed (observed from confusion matrix, one is deplayed here, left side)
 <p float="center">
 <img src="Readme_Result/confusion_matrix_normalised.png" width="350" />
 <img src="Readme_Result/ROC_curve.png" width="350" /> 
 </p>
 
-* Implemented a neural network model using same variables as the BDT. 
-* * Worked on new NN runner (Model doc of git) and network.
-* * Implemented some statistics gathering method to mix its result with the BDT.
-* * Still need to carry out some hyperparameter optimisation (lots of freedom for the moment) and potentially upgrade the network: only using L2 for the moment. Adding dropout, batchnorm, ... ?
-* * Implementing some logging, saving and checking tools (such as reporting values to tensorboard) that will be useful when implementing the full model. 
-* Worked on an efficient sampler using cross section: access to a dictionary implemented by Aaron using dsid (dataset id) file system. 
-* Worked on the new dataset: meeting with Aaron to discuss access to this. Problem is that it does not seem that simple to gather.
-* What we need appears however quite clearly:
-* *  Three datasets: one with quark-jet rich process, other with gluon rich process. The final one is a jet dataset collecting jet global variable (in order to run the benchmarked model on similar data). Both the quark and gluon tables should have an index pointing to the global jet in the jet table. 
-* *  For each of these jet in the quark-gluon tables (regardless of the type) info required is:
-* * * Final states particles: their 4-momenta with enough info to get direction and apply anti-kT OR the calorimeter maps + potential tracker info from PFlow. The idea in any case is to build a factorisation tree based on some info: whether this is high-level (4 momenta) or low-level (calo-maps + PFlow) should not modify the model
-* * * a jet index indicating the jet with it truth information in the jet table (as mentioned above)
-* * * A notion of pile-up (particularly for the calo-maps: note that a CNN could be deployed to account for this in a first processing layer to build the anti-KT tree). 
-* * * the energy and “rapidity” of the jet: this is particularly important as the Junipr implementation target a narrow range (500-550 GeV, |y| < 1.5).
-* * * If several process are stored in the same quark- or gluon-rich dataset: something to distinguish them. 
+* Granular data: very problematic situation
+    * I spent the entire week familiarising myself with ATLAS software and Athena. I read several rubriques, did the entire tutorial (on the event loop formalism) and read every single one of Aaron's athena code. Very hard to quickly implement something complete as the number of variables is significant, finding information and examples complicate and the target itself is not clear (to this day, I still do not precisely know where to get the calo info in the DAOD files ... ). And this is even before having ran anything on the GRID to collect the whole of the data (only a fraction is on the server).
+    * Had a meeting with Aaron on Thursday (he is quite busy at the moment and hasn't had a chance yet to go over the problem though he said he will be looking over this on Thursday). When I asked him how much should be implemented (refering to triggers, quality cuts, tools to reconstruct data, ...), we realised this might be overly complicate for me to write myself with the little time available. I sent him a schema of the structure of the data I am hoping to collect to at least have something comparable to the Junipr framework (but at reconstructed level in ATLAS). 
+    * I manager to run an Athena code (mix of C++ and python) to gather some of this information (some Jet info such as pT, eta, ... and even some info on particles inside jets such as pT, eta, phi, ...). Problem is that the missing information is much harder to get (truth label on the jet, dsid) and some control on the data should happen. To have something descent from the physics point of view, a lot of data processing is required (and I have no experience whatsoever in this) .
+    * So we are wondering if we should strategically retreat to the simpler formalism (using reconstructed info to build antiKt factorisation tree in the ATLAS detector and then run along Junipr).
+
 
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
