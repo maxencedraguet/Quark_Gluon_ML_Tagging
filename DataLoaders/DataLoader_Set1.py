@@ -32,7 +32,7 @@ class DataLoader_Set1(_BaseDataLoader):
     def extract_parameters(self, config: Dict):
         self.data_path = config.get(["absolute_data_path"])
         self.seed = config.get(["seed"])
-        self.test_size = config.get(["BDT_model", "test_size"])
+        self.test_size = config.get(["test_size"])
     
     def load_separate_data(self):
         """

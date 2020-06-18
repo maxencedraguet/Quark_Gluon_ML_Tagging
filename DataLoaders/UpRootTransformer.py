@@ -49,7 +49,7 @@ class UpRootTransformer(ABC):
     
     def extract_parameters(self, config: Dict)->None:
         # In this case it should be the path to a text file, with all directories to load.
-        self.data_file = config.get(["relative_data_path"])
+        self.data_file = config.get(["absolute_data_path"])
         self.path = config.get(["UpRootTransformer", "save_path"])
         self.save_csv_bool = config.get(["UpRootTransformer", "to_CSV"])
         self.save_hdf_bool = config.get(["UpRootTransformer", "to_HDF5"])
@@ -58,7 +58,6 @@ class UpRootTransformer(ABC):
         self.diagnostic_path = os.path.join(self.path, 'Diagnostic/')
         
         self.seed = config.get(["seed"])
-        self.test_size = config.get(["BDT_model", "test_size"])
         self.diagnostic_bool = config.get(["diagnostic"])
     
     def get_inputs_list(self)->None:
@@ -122,7 +121,7 @@ class UpRootTransformer(ABC):
         # pdf.drop(pdf[pdf['GenFiltHT'] < 600].index, inplace=True)
         
         # Only keep variables required.
-        pdf.drop(pdf.columns.difference( Specific_Set2_Parameters.qg_tagging_vars), axis = 1, inplace=True)
+        pdf.drop(pdf.columns.difference(Specific_Set2_Parameters.qg_tagging_vars), axis = 1, inplace=True)
         
         # More analysis oreintated cuts, 'baseline jets'.
         drop_indices_analysis = pdf[(pdf['jetPt'] < 20)          |
