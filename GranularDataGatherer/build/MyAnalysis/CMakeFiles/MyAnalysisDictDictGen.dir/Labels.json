@@ -1,0 +1,22 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/draguet/QGdis/GranularDataGatherer/build/MyAnalysis/CMakeFiles/MyAnalysisDictDictGen"
+		},
+		{
+			"file" : "/home/draguet/QGdis/GranularDataGatherer/build/MyAnalysis/CMakeFiles/MyAnalysisDictDictGen.rule"
+		},
+		{
+			"file" : "/home/draguet/QGdis/GranularDataGatherer/build/MyAnalysis/CMakeFiles/MyAnalysisDict.dsomap.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"MyAnalysis"
+		],
+		"name" : "MyAnalysisDictDictGen"
+	}
+}

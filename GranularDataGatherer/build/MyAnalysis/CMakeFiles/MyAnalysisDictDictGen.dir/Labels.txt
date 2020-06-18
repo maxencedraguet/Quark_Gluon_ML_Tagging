@@ -1,0 +1,6 @@
+# Target labels
+ MyAnalysis
+# Source files and their labels
+/home/draguet/QGdis/GranularDataGatherer/build/MyAnalysis/CMakeFiles/MyAnalysisDictDictGen
+/home/draguet/QGdis/GranularDataGatherer/build/MyAnalysis/CMakeFiles/MyAnalysisDictDictGen.rule
+/home/draguet/QGdis/GranularDataGatherer/build/MyAnalysis/CMakeFiles/MyAnalysisDict.dsomap.rule

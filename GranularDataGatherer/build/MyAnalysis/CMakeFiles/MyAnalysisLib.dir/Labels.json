@@ -1,0 +1,22 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/MyAnalysis/MyAnalysisDict.h"
+		},
+		{
+			"file" : "/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/MyAnalysis/MyxAODAnalysis.h"
+		},
+		{
+			"file" : "/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/Root/MyxAODAnalysis.cxx"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"MyAnalysis"
+		],
+		"name" : "MyAnalysisLib"
+	}
+}

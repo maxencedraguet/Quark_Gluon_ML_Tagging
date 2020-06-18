@@ -1,0 +1,9 @@
+[release_metadata]
+release:
+nightly name:Unknown
+project name:UserAnalysis
+nightly release:Unknown
+date:2020-06-15T1634
+compiler:GNU-8.3.0
+cxxpath:/cvmfs/atlas.cern.ch/repo/sw/software/21.2/sw/lcg/releases/gcc/8.3.0-cebb0/x86_64-centos7/bin/g++
+cmake:3.14.3
