@@ -17,12 +17,12 @@
     * Weird bug from Condor: for the NN family, it does not return some of the output file from the code nor the error and output files from the submission. No error is observed however (tensorboard shows result to the end) and everything is produced as expected when running on ppxint. I saved all trained models. 
     * A ROC curve comparison follows (mostly unreadable as performance seems to be equivalent across models), as shown below. All models beat the given BDT (since no cross section weight here). Own BDT and NN with weight decay = 0.000001 and [14, 32, 32, 1] (structure: 14 inputs to 2 32-unit hidden layers to a final one with sigmoid) and dropout probability of first layer at 0.1 seem to win.
     <p float="center">
-    <img src="Readme_Result/ROC_curve_all_models.png" width="600" /> 
+    <img src="Readme_Result/ROC_curve_all_models.png" width="700" /> 
     </p>
     * Weird observation: performance for BDT is uniform over labels (below left), but for NN gluons are systematically better reconstructed (observed from confusion matrix, one is deplayed here, right side).
 <p float="center">
-<img src="Readme_Result/confusion_matrixBDT" width="350" />
-<img src="Readme_Result/confusion_matrixNN" width="350" /> 
+<img src="Readme_Result/confusion_matrixBDT.png" width="350" />
+<img src="Readme_Result/confusion_matrixNN.png" width="350" /> 
 </p>
 Both have run on Set3 with 1% of the test data (20% of whole data). 
 * Granular data: very problematic situation
