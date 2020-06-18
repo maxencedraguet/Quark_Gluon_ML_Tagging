@@ -23,7 +23,7 @@ class MainParameters(object):
             for prop in property_name:
                 value = value.get(prop, "Unknown Key")
                 if value == "Unknown Key":
-                    raise ValueError("Config key {} unrecognised".format(prop))
+                    return False
             return value
         elif type(property_name) == str:
             value = self._config.get(property_name, "Unknown Key")

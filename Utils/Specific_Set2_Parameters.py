@@ -17,6 +17,8 @@
 
 #cleaning_dict = [name : cut type]
 #Tried to come up with an idea to pass the conditions cleverly, failed for now.
+import numpy as np
+
 nominal_cleaning_vars = [
                          'hasBadJet',#  : == 1,
                          'hasBadMuon',# : == 1,
