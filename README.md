@@ -21,10 +21,12 @@
     </p>
     
     * Weird observation: performance for BDT is uniform over labels (below left), but for NN gluons are systematically better reconstructed (observed from confusion matrix, one is deplayed here, right side).
+    
 <p float="center">
 <img src="Readme_Result/confusion_matrixBDT.png" width="350" />
 <img src="Readme_Result/confusion_matrixNN.png" width="350" /> 
 </p>
+
 Both have run on Set3 with 1% of the test data (20% of whole data). 
 
 * Granular data: very problematic situation
@@ -54,3 +56,6 @@ PyTorch should be appropriate to implement all considered network implementation
 * Generative Adversarial Networks ([GAN](https://pytorch.org/tutorials/beginner/dcgan_faces_tutorial.html))
 
 A larger list of tutorials for [PyTorch](https://pytorch.org/tutorials/). 
+
+A tutorial on how to use Athena and the ATLAS codebase to analyse the xAOD files can be found [here](https://atlassoftwaredocs.web.cern.ch/ABtutorial/alg_basic_intro/)
+A short explanation on variables is available [here](https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/Run2JetMoments)but requires a TWIKI access. 
