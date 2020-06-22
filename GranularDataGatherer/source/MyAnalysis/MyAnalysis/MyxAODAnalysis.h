@@ -1,6 +1,8 @@
 #ifndef MyAnalysis_MyxAODAnalysis_H
 #define MyAnalysis_MyxAODAnalysis_H
 
+#include "MyAnalysis/MJEnums.h"
+#include "MyAnalysis/IMultijetsMasterTool.h"
 #include <AnaAlgorithm/AnaAlgorithm.h>
 #include <TH1.h>
 #include <TTree.h>
@@ -23,15 +25,38 @@ private:
   //TTree *m_myTree;
   //TH1 *m_myHist;
   ~MyxAODAnalysis () override;
+  ToolHandle<IMultijetsMasterTool> m_masterTool;
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number
+  
+  std::vector<int> *m_jetCount = nullptr;
+  
+  std::vector<float> *m_jetMass = nullptr;
   std::vector<float> *m_jetEta = nullptr;
   std::vector<float> *m_jetPhi = nullptr;
   std::vector<float> *m_jetPt = nullptr;
   std::vector<float> *m_jetE = nullptr;
+
+  std::vector<int> *m_jetNumTrkPt500 = nullptr;
+  std::vector<int> *m_jetNumTrkPt1000 = nullptr;
+  std::vector<float> *m_jetSumTrkPt500 = nullptr;
+  std::vector<float> *m_jetSumTrkPt1000 = nullptr;
+  std::vector<float> *m_jetTrackWidthPt500 = nullptr;
+  std::vector<float> *m_jetTrackWidthPt1000 = nullptr;
+  std::vector<float> *m_jetEMFrac = nullptr;
+  std::vector<float> *m_jetHECFrac = nullptr;
+
+  std::vector<float> *partE = nullptr;
   std::vector<float> *partPt = nullptr;
   std::vector<float> *partEta = nullptr;
   std::vector<float> *partPhi = nullptr;
+  std::vector<float> *partMass = nullptr;
+  std::vector<float> *partDeltaR = nullptr;
+  std::vector<int> *partJetCount = nullptr;
+  std::vector<int> *partRunNumber = nullptr;
+  std::vector<int> *partEventNumber = nullptr;
+
+  bool c_isMC;
 };
 
 #endif

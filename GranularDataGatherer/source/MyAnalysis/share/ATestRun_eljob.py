@@ -25,7 +25,7 @@ sh.printContent()
 # Create an EventLoop job.
 job = ROOT.EL.Job()
 job.sampleHandler( sh )
-job.options().setDouble( ROOT.EL.Job.optMaxEvents, 500 )
+job.options().setDouble( ROOT.EL.Job.optMaxEvents, 10 )
 job.options().setString( ROOT.EL.Job.optSubmitDirMode, 'unique-link')
 job.outputAdd (ROOT.EL.OutputStream ('ANALYSIS'))
 # Create the algorithm's configuration.
@@ -42,13 +42,15 @@ driver = ROOT.EL.DirectDriver()
 driver.submit( job, options.submission_dir )
 
 # retrieve a histogram from one sample
+"""
 sh_hist = ROOT.SH.SampleHandler()
 sh_hist.load (options.submission_dir + '/hist')
-hist = sh_hist.get ('mc16_13TeV.410501.PowhegPythia8EvtGen_A14_ttbar_hdamp258p75_nonallhad.merge.AOD.e5458_s3126_r9364_r9315').readHist('h_jetPt')
-
+hist = sh_hist.get ("mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128").readHist('h_deltaR')
 # create a canvas, draw the histogram and wait for a
 # double click (then continue/end)
 c = ROOT.TCanvas()
 hist.Draw()
 c.Update()
-c.WaitPrimitive()
+#c.WaitPrimitive()
+c.SaveAs(options.submission_dir + '/hist' + "deltaR_jet_constituent.png");
+"""
