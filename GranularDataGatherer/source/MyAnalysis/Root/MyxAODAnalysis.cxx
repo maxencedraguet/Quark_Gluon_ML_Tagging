@@ -3,9 +3,11 @@
 #include <xAODEventInfo/EventInfo.h>
 #include <xAODJet/JetContainer.h>
 
+#include "MyAnalysis/MJEnums.h"
+#include "MyAnalysis/IMultijetsMasterTool.h"
 MyxAODAnalysis :: MyxAODAnalysis (const std::string& name,
                                   ISvcLocator *pSvcLocator)
-    : EL::AnaAlgorithm (name, pSvcLocator)
+    : EL::AnaAlgorithm (name, pSvcLocator), m_masterTool ("IMultijetsMasterTool")
 { 
   declareProperty( "MasterTool", m_masterTool );
   // base variable initialisze

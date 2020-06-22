@@ -1,5 +1,5 @@
-#ifndef ATHNTUPFROMXAOD_MJENUMS_H
-#define ATHNTUPFROMXAOD_MJENUMS_H
+#ifndef MYANALYSIS_MJENUMS_H
+#define MYANALYSIS_MJENUMS_H
 
 enum class OutputSetting : int{
   Off = 0,

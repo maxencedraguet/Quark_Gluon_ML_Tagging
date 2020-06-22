@@ -1,8 +1,9 @@
 #ifndef MyAnalysis_MyxAODAnalysis_H
 #define MyAnalysis_MyxAODAnalysis_H
 
-#include "MyAnalysis/MJEnums.h"
-#include "MyAnalysis/IMultijetsMasterTool.h"
+#include <AsgTools/ToolHandle.h>
+#include <MyAnalysis/IMultijetsMasterTool.h>
+#include <MyAnalysis/MJEnums.h>
 #include <AnaAlgorithm/AnaAlgorithm.h>
 #include <TH1.h>
 #include <TTree.h>
