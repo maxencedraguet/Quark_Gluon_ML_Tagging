@@ -2,8 +2,8 @@
 #define MyAnalysis_MyxAODAnalysis_H
 
 #include <AsgTools/ToolHandle.h>
-#include <MyAnalysis/IMultijetsMasterTool.h>
-#include <MyAnalysis/MJEnums.h>
+//#include <MyAnalysis/IMultijetsMasterTool.h>
+//#include <MyAnalysis/MJEnums.h>
 #include <AnaAlgorithm/AnaAlgorithm.h>
 #include <TH1.h>
 #include <TTree.h>
@@ -26,7 +26,7 @@ private:
   //TTree *m_myTree;
   //TH1 *m_myHist;
   ~MyxAODAnalysis () override;
-  ToolHandle<IMultijetsMasterTool> m_masterTool;
+  //ToolHandle<IMultijetsMasterTool> m_masterTool;
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number
   
@@ -57,7 +57,7 @@ private:
   std::vector<int> *partRunNumber = nullptr;
   std::vector<int> *partEventNumber = nullptr;
 
-  bool c_isMC;
+  //bool c_isMC;
 };
 
 #endif

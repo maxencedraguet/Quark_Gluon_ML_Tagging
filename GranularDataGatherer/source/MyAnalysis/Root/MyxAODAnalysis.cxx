@@ -3,13 +3,13 @@
 #include <xAODEventInfo/EventInfo.h>
 #include <xAODJet/JetContainer.h>
 
-#include "MyAnalysis/MJEnums.h"
-#include "MyAnalysis/IMultijetsMasterTool.h"
+//#include "MyAnalysis/MJEnums.h"
+//#include "MyAnalysis/IMultijetsMasterTool.h"
 MyxAODAnalysis :: MyxAODAnalysis (const std::string& name,
                                   ISvcLocator *pSvcLocator)
-    : EL::AnaAlgorithm (name, pSvcLocator), m_masterTool ("IMultijetsMasterTool")
+    : EL::AnaAlgorithm (name, pSvcLocator)//, m_masterTool ("IMultijetsMasterTool")
 { 
-  declareProperty( "MasterTool", m_masterTool );
+  //declareProperty( "MasterTool", m_masterTool );
   // base variable initialisze
 }
 
@@ -19,10 +19,10 @@ StatusCode MyxAODAnalysis :: initialize ()
   //ANA_CHECK (book (TH1F ("h_jetPt", "h_jetPt", 100, 0, 500))); // jet pt [GeV]
   //ANA_CHECK (book (TH1F ("h_deltaR", "h_deltaR", 100, 0, 1))); // deltaR between jet and constituent particle
 
-  m_masterTool->newFunctionWelcome("MultijetsSystematicNTUPMaker::initialize");
-  ATH_CHECK( m_masterTool.retrieve() );
-  c_isMC = m_masterTool->getIsMC();
-  ANA_MSG_INFO ("is MC ? "<<c_isMC);
+  //m_masterTool->newFunctionWelcome("MultijetsSystematicNTUPMaker::initialize");
+  //ATH_CHECK( m_masterTool.retrieve() );
+  //c_isMC = m_masterTool->getIsMC();
+  //ANA_MSG_INFO ("is MC ? "<<c_isMC);
   ANA_CHECK (book (TTree ("analysis", "My analysis ntuple")));
   TTree* mytree = tree ("analysis");
   mytree->Branch ("RunNumber", &m_runNumber);
@@ -86,8 +86,8 @@ StatusCode MyxAODAnalysis :: initialize ()
 
 StatusCode MyxAODAnalysis :: execute ()
 {  
-  static SG::AuxElement::ConstAccessor<unsigned int>       cacc_pvIndex("pvIndex");
-  static SG::AuxElement::ConstAccessor<char>               cacc_bjet("bjet");
+  //static SG::AuxElement::ConstAccessor<unsigned int>       cacc_pvIndex("pvIndex");
+  //static SG::AuxElement::ConstAccessor<char>               cacc_bjet("bjet");
   /* to be done on every events  
   const xAOD::JetContainer* jets = nullptr;
   ANA_CHECK (evtStore()->retrieve (jets, "AntiKt4TruthJets"));
@@ -140,7 +140,7 @@ StatusCode MyxAODAnalysis :: execute ()
  for (const xAOD::Jet* jet : *jets2) {
     counter_jet ++;
 
-    ANA_MSG_INFO ("execute(): B jet "<< cacc_bjet(*jet) );
+    //ANA_MSG_INFO ("execute(): B jet "<< cacc_bjet(*jet) );
     m_jetEta->push_back (jet->eta ());
     m_jetPhi->push_back (jet->phi ());
     m_jetPt-> push_back (jet->pt () * 0.001);
@@ -165,7 +165,7 @@ StatusCode MyxAODAnalysis :: execute ()
     ANA_MSG_INFO ("execute(): jet m_jetEMFrac "<< jet->getAttribute<float>("EMFrac"));
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 = " << (jet->getAttribute<float>("SumPtTrkPt500")));
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 = " << (jet->getAttribute<int>( "NumTrkPt500")));
-    ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 size= " <<pobjs.size());
+    //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 size= " <<pobjs.size());
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 AT PV INDEX = " << jet->getAttribute<std::vector<int>>(xAOD::JetAttribute::NumTrkPt500).at(pvIndex) );
     for (unsigned i=0; i<pobjs.size(); ++i)
     	ANA_MSG_INFO ("execute(): m_jetNumTrkPt500 " << pobjs[i]);
@@ -187,21 +187,21 @@ StatusCode MyxAODAnalysis :: execute ()
     const xAOD::JetConstituentVector cons = jet->getConstituents();
     for (auto cluster_itr : cons){
         counter_part ++;
-        ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << "for jet number " << counter_jet <<" in particle number: "<<counter_part);
+        ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
         partE->push_back(cluster_itr->e() * 0.001);
     	partPt->push_back(cluster_itr->pt() * 0.001);
     	partEta->push_back(cluster_itr->eta());
     	partPhi->push_back(cluster_itr->phi());
         partMass->push_back(cluster_itr->m());
-	partJetCount->push_back(counter_jet);
+        partJetCount->push_back(counter_jet);
         partRunNumber->push_back(m_runNumber);
         partEventNumber->push_back(m_eventNumber);	
 
 	//Compute delta R between consitutent and Jet
         Double_t deta = cluster_itr->eta() - jet->eta ();
-  	Double_t dphi = TVector2::Phi_mpi_pi(cluster_itr->phi() - jet->phi());
-  	double_t dR   = TMath::Sqrt( deta*deta+dphi*dphi );
- 	//hist ("h_deltaR")->Fill (dR);
+        Double_t dphi = TVector2::Phi_mpi_pi(cluster_itr->phi() - jet->phi());
+        double_t dR   = TMath::Sqrt( deta*deta+dphi*dphi );
+        //hist ("h_deltaR")->Fill (dR);
         partDeltaR->push_back(dR);
   	/*
         ANA_MSG_INFO ("execute(): constitutent Run " <<m_runNumber<< " and eventnumber "<<m_eventNumber);
