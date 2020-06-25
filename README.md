@@ -88,4 +88,6 @@ A general tutorial on EventLoop is accessible [here](https://twiki.cern.ch/twiki
 
 A tutorial on how to use Athena and the ATLAS codebase to analyse the xAOD files can be found [here](https://atlassoftwaredocs.web.cern.ch/ABtutorial/alg_basic_intro/).
 
+An ATLAS dataset browser is available here [AMI](https://ami.in2p3.fr) and requries a CERN account as well as some certificates. 
+
 A short explanation on variables is available [here](https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/Run2JetMoments)but requires a TWIKI access. 
