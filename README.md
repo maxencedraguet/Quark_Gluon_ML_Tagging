@@ -1,39 +1,66 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* Finished implementing a Neural Network runner (NNrunner).
-    * Optimised it.
-    * Tensorboard implementation with server running.
-
-* Implemented a train-validation-test separator with some data quality checks. (In DataLoaders)
-
-* Reprocessed the dataset set2 into a set3  (identical structure, some data was however missing as I found out in the previous step + some were incorrect, missing an r-tag). Store on server
-
-* Implemented intelligent loader (in DataSet2_loader):
-    * based on cross-section: problem here: the cross section of some process is incredibly small compared to other processes. For example user.aoneill.202004281.mc16.361032.Py8EG_N23LO_jetjet_JZ12W.SUSY4.e3668_s3126_s3136_r9364_r9315_p3652_NTUP has a relative cross section of 6.4088763234695515e-18 ... to compare to /user.aoneill.202004281.mc16.361023.Py8EG_N23LO_jetjet_JZ3W.SUSY4.e3668_s3126_r9364_r9315_p3652_NTUP that accounts for almost 90 % of it ! So the sampler follows this relative cross section with at least one event for each signal. This means a vast majority of processes no longer contribute (only 8-9 of them had enough importance to be sampled more than once). This discrepancy may explain why the given BDT performs less efficiently than the self-trained one. 
-    * working on other ones based on energy and specific file.
-
-* Trained a variety of models and compared them.  
-    * Weird bug from Condor: for the NN family, it does not return some of the output file from the code nor the error and output files from the submission. No error is observed however (tensorboard shows result to the end) and everything is produced as expected when running on ppxint. I saved all trained models. 
-    * A ROC curve comparison follows (mostly unreadable as performance seems to be equivalent across models), as shown below. All models beat the given BDT (since no cross section weight here). Own BDT and NN with weight decay = 0.000001 and [14, 32, 32, 1] (structure: 14 inputs to 2 32-unit hidden layers to a final one with sigmoid) and dropout probability of first layer at 0.1 seem to win.
+* Spent the 6 days working on the Granular Data Gatherer. Several elements were implemented:
+    * Retrieving jet constituents of variables: pT, eta, phi, energy, mass, and \delta R. 
+    * Storage in a TTree to be used with UpRoot later one
+    * Had a small issue on indexing constituents to the RunNumber, EventNumber, JetNumber. The last one is a counter of the number of jets in a given RunNumber, EventNumber. These three indexes therefore form a key uniquely identifying each event for a given datafile. 
+    * Had a check of the data and plotted the \delta R histogram. The result, shown below, is consistent with the jet target: AntiKt4EMTopoJets.  
+    
     <p float="center">
-    <img src="Readme_Result/ROC_curve_all_models.png" width="700" /> 
+    <img src="Readme_Result/histdeltaR_jet_constituent.png" width="700" />
     </p>
     
-    * Weird observation: performance for BDT is uniform over labels (below left), but for NN gluons are systematically better reconstructed (observed from confusion matrix, one is deplayed here, right side).
+    * I wrote a test loader on the output of the algorithm for constituent information: managed to obtain a panda dataframe of expected structure.
     
-<p float="center">
-<img src="Readme_Result/confusion_matrixBDT.png" width="350" />
-<img src="Readme_Result/confusion_matrixNN.png" width="350" /> 
-</p>
+    * Worked on gathering global jet variables: in fact almost the same list of variables as used before:
+        * 'jetPt', 'jetEta', 'jetPhi', 'jetMass', 'jetEnergy', 'jetEMFrac',  'jetNumTrkPt500', 'jetNumTrkPt1000', 'jetTrackWidthPt500', 'jetTrackWidthPt1000', 'jetSumTrkPt500', 'jetSumTrkPt1000', 'jetEMFrac', 'jetHECFrac'.
+        * Only one not gathered for now is:  'jetChFrac'.
+        * For the jetXPt500/1000: I was surprised to discover they each returned vectors of 19 entries (irrespective of the number of jet). Scavenging through one of Aaron's code, I realised it should be addressed with a specific element: pvIndex. Retrieving that element proved a bit of a mess: I am using EventLoop formalism and the access method I copied from Aaron, according to him, couldn't work with this addressing. 
+    * Another issue we faced was regarding quark-gluon truth information. Going through his code, I realise it shouldn't be that hard to implement for this case. This would increase the quality of the final analysis (with a discussion on the precision of weak supervision). The problem was that it uses some specific tools that need to be properly loaded into the algorithm. Once again, the difference of formalism generated some weird bug.
+    * I am working with Aaron to resolve these issues. It is quite hard to debug because the error messages we get offers very little information (an error in the algorithm seems to mostly only return an error regarding the driver.submit command).
+    
+    * I started focusing on running jobs on the grid. I followed every step from the Atlas tutorial to get access and installed everything as required. This should be properly set up now. I wrote a test steering macro (using SH::scanRucio for file access and PrunDriver driver). I also found a way to search what data is available on the grid (using a browser to access Ami). 
+        * There is a problem in the processing of the data (the error message is displayed below). The algorithm does work locally (local driver + local data) but not on the GRID. I tried several things to debug it:
+            * Change the driver to the local one DirectDriver: that was interesting because it showed the processing, after loading the data using RUCIO (so even grid data was read locally indicating that aspect works) actually starts: a few events are processed before a failure occurs. The end of the error message is the same one as the simple grid job => assume it is the same problem. 
+            * Given this result, I wondered if this was due to the nature of the data I processed: a data file (not simulated). I changed the target and obtained the same result on grid processing. Notable difference: I received emails explaining job failed for all data ones but not for the MC ones.
+            * I discussed this problem with Aaron and we spent an hour yesterday trying to understand it. Right now we have no idea what is going wrong. He mentionned he has also had some weird bugs on routines that should work and that there might be something "fishy" with the grid for the moment. 
+            
+    * Following these (frustrating) bugs, Aaron proposed to debug the Gathering code while I focus on the next stage of processing. I will run the (working version of the) algorithm locally on the available data to gather a subset to process into the (dreamt) trees. 
+                
 
-Both have run on Set3 with 1% of the test data (20% of whole data). 
+#### First error message for GRID job on Grid. 
+"""
+TypeError: bool TObject::IsEqual(const TObject* obj) =>
+could not convert argument 1
+Traceback (most recent call last):
+File "../source/MyAnalysis/share/ATestSubmit.py", line 45, in <module>
+driver.submit( job, options.submission_dir )
+TypeError: none of the 2 overloaded methods succeeded. Full details:
+void EL::Driver::submit(const EL::Job& job, const string& location) =>
+basic_string::_M_construct null not valid (C++ exception of type logic_error)
+void EL::Driver::submit(const EL::Job& job, const string& location, string& actualLocation) =>
+takes at least 3 arguments (2 given)
+"""
 
-* Granular data: very problematic situation
-    * I spent the entire week familiarising myself with ATLAS software and Athena. I read several rubrics, did the entire tutorial (on the event loop formalism) and read every single one of Aaron's athena code. Very hard to quickly implement something complete as the number of variables is significant, finding information and examples complicate and the target itself is not clear (to this day, I still do not precisely know where to get the calo info in the DAOD files ... ). And this is even before having run anything on the GRID to collect the whole of the data (only a fraction is on the server).
-    * Had a meeting with Aaron on Thursday (he is quite busy at the moment and hasn't had a chance yet to go over the problem though he said he will be looking over this on Thursday). When I asked him how much should be implemented (referring to triggers, quality cuts, tools to reconstruct data, ...), we realised this might be overly complex for me to write myself with the little time available. I sent him a schema of the structure of the data I am hoping to collect to at least have something comparable to the Junipr framework (but at reconstructed level in ATLAS). 
-    * I managed to run an Athena code (mix of C++ and python) to gather some of this information (some Jet info such as pT, eta, ... and even some info on particles inside jets such as pT, eta, phi, ...). Problem is that the missing information is much harder to get (truth label on the jet, dsid) and some control on the data should happen. To have something descent from the physics point of view, a lot of data processing is required (and I have no experience whatsoever in this).
-    * So we are wondering if we should strategically retreat to the simpler formalism (using reconstructed info to build antiKt factorisation tree in the ATLAS detector and then run along Junipr).
+#### Second error message for GRID job run locally with grid data accessed with Rucio. 
+"""
+xAOD::TEvent::getInput... WARNING Key 0x386a6769 unknown
+xAOD::TVirtualEvent::r... WARNING Couldn't retrieve 10DataVectorIN4xAOD9IParticleEN16DataModel_detail6NoBaseEE/0x386a6769
+Package.EventLoop        ERROR   /build/atnight/localbuilds/nightlies/21.2/athena/PhysicsAnalysis/D3PDTools/EventLoop/Root/MessageCheck.cxx:35 (void EL::Detail::report_exception()): caught exception: ElementLink::operator*() Element not available
+Package.EventLoop        ERROR   
+....
+TypeError: bool TObject::IsEqual(const TObject* obj) =>
+could not convert argument 1
+Traceback (most recent call last):
+File "../source/MyAnalysis/share/ATestSubmit.py", line 45, in <module>
+driver.submit( job, options.submission_dir )
+TypeError: none of the 2 overloaded methods succeeded. Full details:
+void EL::Driver::submit(const EL::Job& job, const string& location) =>
+basic_string::_M_construct null not valid (C++ exception of type logic_error)
+void EL::Driver::submit(const EL::Job& job, const string& location, string& actualLocation) =>
+takes at least 3 arguments (2 given)
+"""
 
 
 
@@ -57,5 +84,8 @@ PyTorch should be appropriate to implement all considered network implementation
 
 A larger list of tutorials for [PyTorch](https://pytorch.org/tutorials/). 
 
-A tutorial on how to use Athena and the ATLAS codebase to analyse the xAOD files can be found [here](https://atlassoftwaredocs.web.cern.ch/ABtutorial/alg_basic_intro/)
+A general tutorial on EventLoop is accessible [here](https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/EventLoop#Grid_Driver) but requires a CERN account.
+
+A tutorial on how to use Athena and the ATLAS codebase to analyse the xAOD files can be found [here](https://atlassoftwaredocs.web.cern.ch/ABtutorial/alg_basic_intro/).
+
 A short explanation on variables is available [here](https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/Run2JetMoments)but requires a TWIKI access. 
