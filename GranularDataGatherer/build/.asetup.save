@@ -4,7 +4,7 @@ export LANG="C"
 export LC_ALL="C"
 export BINARY_TAG="x86_64-centos7-gcc8-opt"
 export CMTCONFIG="x86_64-centos7-gcc8-opt"
-ASETUP_SYSBIN=/tmp/draguet/.asetup-sysbin_$$
+ASETUP_SYSBIN=/tmp/oneilla/.asetup-sysbin_$$
 if [ ! -d $ASETUP_SYSBIN ]; then
     mkdir -p $ASETUP_SYSBIN
 fi
@@ -17,12 +17,12 @@ if [ -n "${MAKEFLAGS:+x}" ]; then
 else
     export MAKEFLAGS="-j40 -l40"
 fi
-source /cvmfs/atlas.cern.ch/repo/sw/software/21.2/sw/lcg/releases/gcc/8.3.0-cebb0/x86_64-centos7/setup.sh
-export CC=`which --skip-alias gcc 2>/dev/null`
+source /cvmfs/sft.cern.ch/lcg/releases/gcc/8.3.0-cebb0/x86_64-centos7/setup.sh
+export CC=`\env which gcc 2>/dev/null`
 [[ -z $CC ]] && unset CC
-export CXX=`which --skip-alias g++ 2>/dev/null`
+export CXX=`\env which g++ 2>/dev/null`
 [[ -z $CXX ]] && unset CXX
-export FC=`which --skip-alias gfortran 2>/dev/null`
+export FC=`\env which gfortran 2>/dev/null`
 [[ -z $FC ]] && unset FC
 export CMAKE_NO_VERBOSE="1"
 type lsetup >/dev/null 2>/dev/null
@@ -31,32 +31,24 @@ if [ $? -ne 0 ]; then
 fi
 source $ATLAS_LOCAL_ROOT_BASE/packageSetups/localSetup.sh --quiet "cmake 3.14.3"
 if [ -z "${AtlasSetup:+x}" ]; then
-    export AtlasSetup="/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/x86_64/AtlasSetup/V02-00-08/AtlasSetup"
-    export AtlasSetupVersion="AtlasSetup-02-00-08"
+    export AtlasSetup="/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase/x86_64/AtlasSetup/V02-00-09/AtlasSetup"
+    export AtlasSetupVersion="AtlasSetup-02-00-09"
 fi
-export FRONTIER_LOG_LEVEL="warning"
-export ATLAS_POOLCOND_PATH="/cvmfs/atlas-condb.cern.ch/repo/conditions"
-export ATLAS_DB_AREA="/cvmfs/atlas.cern.ch/repo/sw/database"
-export DBRELEASE_OVERRIDE="current"
-export GAUDI_ROOT="/cvmfs/atlas.cern.ch/repo/sw/software/21.2/GAUDI/21.2.104/InstallArea/x86_64-centos7-gcc8-opt"
-export SITEROOT="/cvmfs/atlas.cern.ch/repo/sw/software/21.2"
-export AtlasBaseDir="/cvmfs/atlas.cern.ch/repo/sw/software/21.2"
-export LCG_RELEASE_BASE="/cvmfs/atlas.cern.ch/repo/sw/software/21.2/sw/lcg/releases"
-export AtlasBuildStamp="2020-01-09T0347"
-export AtlasReleaseType="stable"
+export AtlasBaseDir="/cvmfs/atlas-nightlies.cern.ch/repo/sw/21.2_AnalysisBase_x86_64-centos7-gcc8-opt/2020-06-24T0354"
+export AtlasBuildStamp="2020-06-24T0354"
+export AtlasReleaseType="nightly"
 export AtlasBuildBranch="21.2"
 export AtlasProject="AnalysisBase"
-export TDAQ_RELEASE_BASE="/cvmfs/atlas.cern.ch/repo/sw/software/21.2"
-export ATLAS_RELEASE_BASE="/cvmfs/atlas.cern.ch/repo/sw/software/21.2"
-export ATLAS_RELEASEDATA="/cvmfs/atlas.cern.ch/repo/sw/software/21.2/atlas/offline/ReleaseData"
-export AtlasArea="/cvmfs/atlas.cern.ch/repo/sw/software/21.2/AnalysisBase/21.2.104"
-export AtlasVersion="21.2.104"
-source /cvmfs/atlas.cern.ch/repo/sw/software/21.2/AnalysisBase/21.2.104/InstallArea/x86_64-centos7-gcc8-opt/setup.sh
+export TDAQ_RELEASE_BASE="/cvmfs/atlas.cern.ch/repo/sw/tdaq"
+export ATLAS_RELEASE_BASE="/cvmfs/atlas-nightlies.cern.ch/repo/sw/21.2_AnalysisBase_x86_64-centos7-gcc8-opt/2020-06-24T0354"
+export AtlasArea="/cvmfs/atlas-nightlies.cern.ch/repo/sw/21.2_AnalysisBase_x86_64-centos7-gcc8-opt/2020-06-24T0354/AnalysisBase/21.2.128"
+export AtlasVersion="21.2.128"
+source /cvmfs/atlas-nightlies.cern.ch/repo/sw/21.2_AnalysisBase_x86_64-centos7-gcc8-opt/2020-06-24T0354/AnalysisBase/21.2.128/InstallArea/x86_64-centos7-gcc8-opt/setup.sh
 asetup_status=$?
 if [ ${asetup_status} -ne 0 ]; then
-    \echo "AtlasSetup(ERROR): sourcing release setup script (/cvmfs/atlas.cern.ch/repo/sw/software/21.2/AnalysisBase/21.2.104/InstallArea/x86_64-centos7-gcc8-opt/setup.sh) failed"
+    \echo "AtlasSetup(ERROR): sourcing release setup script (/cvmfs/atlas-nightlies.cern.ch/repo/sw/21.2_AnalysisBase_x86_64-centos7-gcc8-opt/2020-06-24T0354/AnalysisBase/21.2.128/InstallArea/x86_64-centos7-gcc8-opt/setup.sh) failed"
 fi
-export TestArea="/home/draguet/QGdis/GranularDataGatherer/build"
+export TestArea="/home/oneilla/Oxford_Physics/MaxenceCode/Quark_Gluon_ML_Tagging/GranularDataGatherer/build"
 alias_sys_exe emacs
 echo $LD_LIBRARY_PATH | egrep "LCG_[^/:]*/curl/" >/dev/null
 if [ $? -eq 0 ]; then
@@ -68,10 +60,21 @@ if [ $? -ne 0 ]; then
 fi
 export PATH="${ASETUP_SYSBIN}:${PATH}"
 
+# resolution for the rucio conflict
+pythonpath_items=$(echo $PYTHONPATH | tr ":" "\n")
+usrlibPath=$(echo "$pythonpath_items" | grep "^/usr/lib/python[^/]*/site-packages" 2>&1)
+if [ "X$usrlibPath" != "X" ]; then
+   usrlibPath64=${usrlibPath/lib/lib64}
+   if [ -d $usrlibPath64 ]; then
+      echo "$pythonpath_items" | grep ^${usrlibPath64} >/dev/null 2>&1 || export PYTHONPATH=${PYTHONPATH}:${usrlibPath64}
+   fi
+fi
+unset pythonpath_items usrlibPath usrlibPath64
+
 #Release Summary as follows:
-#Release base=/cvmfs/atlas.cern.ch/repo/sw/software/21.2
+#Release base=/cvmfs/atlas-nightlies.cern.ch/repo/sw/21.2_AnalysisBase_x86_64-centos7-gcc8-opt/2020-06-24T0354
 #Release project=AnalysisBase
-#Release releaseNum=21.2.104
+#Release releaseNum=21.2.128
 #Release asconfig=x86_64-centos7-gcc8-opt
 
 # Execute user-specified epilog

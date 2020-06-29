@@ -26,9 +26,10 @@ private:
   //TTree *m_myTree;
   //TH1 *m_myHist;
   ~MyxAODAnalysis () override;
-  //ToolHandle<IMultijetsMasterTool> m_masterTool;
+
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number
+  unsigned int pvIndex = 0; //Index of the primary vertex
   
   std::vector<int> *m_jetCount = nullptr;
   

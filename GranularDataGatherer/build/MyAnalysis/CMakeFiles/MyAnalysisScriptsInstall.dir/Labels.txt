@@ -1,6 +1,0 @@
-# Target labels
- MyAnalysis
-# Source files and their labels
-/home/draguet/QGdis/GranularDataGatherer/build/x86_64-centos7-gcc8-opt/bin/ATestRun_eljob.py
-/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/share/ATestRun_eljob.py
-/home/draguet/QGdis/GranularDataGatherer/build/x86_64-centos7-gcc8-opt/bin/ATestRun_eljob.py.rule
