@@ -32,7 +32,17 @@ job.outputAdd (ROOT.EL.OutputStream ('ANALYSIS'))
 from AnaAlgorithm.DualUseConfig import createAlgorithm
 alg = createAlgorithm ( 'MyxAODAnalysis', 'AnalysisAlg' )
 
-# later on we'll add some configuration options for our algorithm that go here
+# Add and configure the GRL tool.
+from AnaAlgorithm.DualUseConfig import addPrivateTool
+
+# add the GRL tool to the algorithm
+addPrivateTool( alg, 'grlTool', 'GoodRunsListSelectionTool' )
+
+# configure the properties of the GRL tool
+### TODO add year configurations here (short term just sent all GRL files to tool.
+fullGRLFilePath = "GoodRunsLists/data16_13TeV/20180129/data16_13TeV.periodAllYear_DetStatus-v89-pro21-01_DQDefects-00-02-04_PHYS_StandardGRL_All_Good_25ns.xml"
+alg.grlTool.GoodRunsListVec = [ fullGRLFilePath ]
+alg.grlTool.PassThrough = 0 # if true (default) will ignore result of GRL and will just pass all events
 
 # Add our algorithm to the job
 job.algsAdd( alg )

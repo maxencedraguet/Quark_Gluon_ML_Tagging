@@ -1,8 +1,12 @@
 #ifndef MyAnalysis_MyxAODAnalysis_H
 #define MyAnalysis_MyxAODAnalysis_H
 
+//AnalysisBase
 #include <AsgTools/ToolHandle.h>
 #include <AnaAlgorithm/AnaAlgorithm.h>
+// GRL
+#include <AsgAnalysisInterfaces/IGoodRunsListSelectionTool.h>
+//Root 
 #include <TH1.h>
 #include <TTree.h>
 #include <vector>
@@ -24,6 +28,9 @@ private:
   //TTree *m_myTree;
   //TH1 *m_myHist;
   ~MyxAODAnalysis () override;
+
+  //GRL tool handle
+  ToolHandle<IGoodRunsListSelectionTool> m_grl;
 
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number

@@ -2,22 +2,22 @@
 #include <MyAnalysis/MyxAODAnalysis.h>
 #include <xAODEventInfo/EventInfo.h>
 #include <xAODJet/JetContainer.h>
-#include "MyAnalysis/MJEnums.h"
 
 MyxAODAnalysis :: MyxAODAnalysis (const std::string& name,
                                   ISvcLocator *pSvcLocator)
-    : EL::AnaAlgorithm (name, pSvcLocator)
+    : EL::AnaAlgorithm (name, pSvcLocator),
+    m_grl ("GoodRunsListSelectionTool/grl", this)
 { 
   // base variable initialisze
+  declareProperty ("grlTool", m_grl, "the GRL tool");
 }
 
 StatusCode MyxAODAnalysis :: initialize ()
 {
-  // to be done at beginning of worker node
-  //ANA_CHECK (book (TH1F ("h_jetPt", "h_jetPt", 100, 0, 500))); // jet pt [GeV]
-  //ANA_CHECK (book (TH1F ("h_deltaR", "h_deltaR", 100, 0, 1))); // deltaR between jet and constituent particle
-  //  ANA_SG_INFO ("is MC ? "<<c_isMC);
+  //Tool initialisation.
+  ANA_CHECK (m_grl.retrieve());
 
+  //Book the tree and setup the branches.
   ANA_CHECK (book (TTree ("analysis", "My analysis ntuple")));
   TTree* mytree = tree ("analysis");
   mytree->Branch ("RunNumber", &m_runNumber);
@@ -84,10 +84,25 @@ StatusCode MyxAODAnalysis :: execute ()
   //Retrieve basic event information
   const xAOD::EventInfo* ei = nullptr;
   ANA_CHECK (evtStore()->retrieve (ei, "EventInfo"));
-  const xAOD::EventInfo* evtInfo2(0);
-  ATH_CHECK(evtStore()->retrieve(evtInfo2, "EventInfo" ) );
+
+  //Is it MC?
+  bool isMC = false;
+  if (ei->eventType (xAOD::EventInfo::IS_SIMULATION)) {
+    isMC = true;
+  }
+  ANA_MSG_INFO("is MC: " << isMC);
+
+  //Retrieve event and run number.
   m_runNumber = ei->runNumber ();
   m_eventNumber = ei->eventNumber ();
+
+  //Data needs to pass the GRL (Good Runs List) conditions.
+  if (!isMC) {
+    if (!m_grl->passRunLB(*ei)) {
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed GRL.");
+      return StatusCode::SUCCESS;
+    }       
+  }
   
   //Get EMTopo jets container (add option for other jet types later).
   const xAOD::JetContainer* jets2 = nullptr;
