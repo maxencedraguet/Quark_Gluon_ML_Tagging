@@ -2,8 +2,6 @@
 #define MyAnalysis_MyxAODAnalysis_H
 
 #include <AsgTools/ToolHandle.h>
-//#include <MyAnalysis/IMultijetsMasterTool.h>
-//#include <MyAnalysis/MJEnums.h>
 #include <AnaAlgorithm/AnaAlgorithm.h>
 #include <TH1.h>
 #include <TTree.h>
