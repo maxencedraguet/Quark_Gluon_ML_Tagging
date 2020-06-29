@@ -69,5 +69,8 @@ if __name__ == "__main__":
     elif experiment_parameters.get(["experiment_type"]) == "UpRootTransformer":
         runner = DataLoaders.UpRootTransformer(config=experiment_parameters)
 
+    elif experiment_parameters.get(["experiment_type"]) == "GranularUpRootTransformer":
+        runner = DataLoaders.GranularUpRootTransformer(config=experiment_parameters)
+
     elif experiment_parameters.get(["experiment_type"]) == "Train_Test_Separator":
         runner = DataLoaders.Train_Test_Separator(config=experiment_parameters)
