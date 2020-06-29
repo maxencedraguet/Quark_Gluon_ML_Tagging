@@ -25,6 +25,7 @@ from .BaseDataLoader import _BaseDataLoader
 
 import numpy as np
 import pandas as pd
+pd.set_option('display.max_rows', None)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 
@@ -73,6 +74,7 @@ class DataLoader_Set2(_BaseDataLoader):
             data_input = self.equilibrate(data_input)
         print("\nEquilibrated state")
         self.analyse_dataset(data_input[['isTruthQuark']])
+        print(data_input)
         data_output = data_input[['isTruthQuark']]
         data_output_BDT = data_input[['BDTScore']]* (-1) #Problem with the BDT values of Baltz: multiply by -1
         # Scale the inputs and restrict to training variables. Note that this outputs a numpy array
