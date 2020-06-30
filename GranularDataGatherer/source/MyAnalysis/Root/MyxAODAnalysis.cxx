@@ -2,15 +2,20 @@
 #include <MyAnalysis/MyxAODAnalysis.h>
 #include <xAODEventInfo/EventInfo.h>
 #include <xAODJet/JetContainer.h>
+#include <xAODCore/ShallowCopy.h>
 
 MyxAODAnalysis :: MyxAODAnalysis (const std::string& name,
                                   ISvcLocator *pSvcLocator)
     : EL::AnaAlgorithm (name, pSvcLocator),
-    m_grl ("GoodRunsListSelectionTool/grl", this)
+    m_grl ("GoodRunsListSelectionTool/grl", this),
+    m_SUSYTools ("ST::ISUSYObjDef_xAODTool/SUSYTools", this),
+    m_JetClean ("JetCleaningTool/JetClean", this)
+
 { 
   // base variable initialisze
   declareProperty ("grlTool", m_grl, "the GRL tool");
   declareProperty ("SUSYTools", m_SUSYTools);
+  declareProperty ("cleaningTool", m_JetClean);
 }
 
 StatusCode MyxAODAnalysis :: initialize ()
@@ -23,6 +28,7 @@ StatusCode MyxAODAnalysis :: initialize ()
 
   ANA_CHECK (m_grl.retrieve());
   ANA_CHECK (m_SUSYTools.retrieve());
+  ANA_CHECK (m_JetClean.retrieve());
 
   /////////////////////////////////////////
   //
@@ -90,7 +96,18 @@ StatusCode MyxAODAnalysis :: initialize ()
 }
 
 StatusCode MyxAODAnalysis :: execute ()
-{  
+{ 
+  /////////////////////////////////////////
+  //
+  // Define all accessors.
+  //
+  /////////////////////////////////////////
+
+  //SUSY Tools Accessors.
+  static SG::AuxElement::ConstAccessor<char> cacc_bad("bad");
+  static SG::AuxElement::ConstAccessor<char> cacc_baseline("baseline");
+  const static SG::AuxElement::ConstAccessor<char> acc_signal("signal");
+
   /////////////////////////////////////////
   //
   // Clear all vars (vectors first).
@@ -195,8 +212,8 @@ StatusCode MyxAODAnalysis :: execute ()
   pvIndex = priVtx->index();
 
   //Debug messages to check status of primary vertex
-  ANA_MSG_DEBUG ("Primary vertex: " << pvIndex);
-  ANA_MSG_DEBUG ("PV nTrack: " << priVtx->nTrackParticles());
+  ANA_MSG_INFO ("Primary vertex: " << pvIndex);
+  ANA_MSG_INFO ("PV nTrack: " << priVtx->nTrackParticles());
 
   /////////////////////////////////////////
   //
@@ -205,20 +222,45 @@ StatusCode MyxAODAnalysis :: execute ()
   /////////////////////////////////////////
 
   //Get EMTopo jets container (add option for other jet types later).
+  //Standard Method.
   const xAOD::JetContainer* jets = nullptr;
-  ANA_CHECK (evtStore()->retrieve (jets, "AntiKt4EMTopoJets"));
+  ANA_CHECK(evtStore()->retrieve(jets, "AntiKt4EMTopoJets"));
+  //Standard Method.
 
-  //Make copy of container and apply calibrations using SUSY tools here.
- 
-  for (const xAOD::Jet* jet : *jets) {
+  //SUSY Tools method.
+  xAOD::JetContainer* jets_nominal(0);
+  xAOD::ShallowAuxContainer* jets_nominal_aux(0);
+
+  //Now get the jets with the main and aux container to decorate the cuts.
+  ANA_CHECK(m_SUSYTools->GetJets(jets_nominal, jets_nominal_aux, true));
+  //SUSY Tools method.
+
+  //Loop over the shallow copied jets.
+  for (auto jet : *jets_nominal) {
+
+    //auto cleanJet = m_JetClean->keep(*jet);
+    //ANA_MSG_INFO('Jet pass: ' << cleanJet);
+    
+    if (cacc_bad(*jet)){
+      ANA_MSG_INFO("Has bad jet");
+    }
+
+    if (cacc_baseline(*jet)){
+      ANA_MSG_INFO("isBaseline");
+    }
+    
+    if (acc_signal(*jet)){
+      ANA_MSG_INFO("isSignal");
+    }
+
     counter_jet ++;
+    
     //Push back all the main jet vector quantities.
-
     m_jetEta->push_back(jet->eta());
     m_jetPhi->push_back(jet->phi());
     m_jetPt-> push_back(jet->pt() * 0.001);
-    m_jetE->push_back(jet->e()* 0.001);
-    m_jetMass->push_back(jet->m());
+    m_jetE->push_back(jet->e() * 0.001);
+    m_jetMass->push_back(jet->m() * 0.001); //DOES THIS NEED TO BE CONVERTED?
     m_jetCount->push_back (counter_jet); //You probably don't need this.
 
     //Calculate jet charge fraction.
@@ -239,7 +281,8 @@ StatusCode MyxAODAnalysis :: execute ()
 
     //Debug string for jet track constituent variables, run in debug or change to INFO
     //(can I just access the last pushback?).
-    ANA_MSG_DEBUG("Jet: " << counter_jet << " with pT: " << (jet->pt() * 0.001) 
+    //TODO: FIX THE UNITS AND BE CONSISTENT.
+    ANA_MSG_INFO("Jet: " << counter_jet << " with pT: " << (jet->pt() * 0.001) 
                          << " has nTrack(500): " 
                          << jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex)
                          << ", nTrack(1000): " 
@@ -274,7 +317,7 @@ StatusCode MyxAODAnalysis :: execute ()
     	  partPt->push_back(cluster_itr->pt() * 0.001);
     	  partEta->push_back(cluster_itr->eta());
     	  partPhi->push_back(cluster_itr->phi());
-        partMass->push_back(cluster_itr->m());
+        partMass->push_back(cluster_itr->m() * 0.001);
 
 	      partJetCount->push_back(counter_jet);
         partRunNumber->push_back(m_runNumber);

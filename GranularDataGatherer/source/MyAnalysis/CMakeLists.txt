@@ -10,8 +10,9 @@ atlas_add_library (MyAnalysisLib
                  AsgAnalysisInterfaces 
                  xAODJet
                  SUSYToolsLib
-
+                 xAODCore
                  AsgTools
+                 JetSelectorToolsLib
                  )
 
 if (XAOD_STANDALONE)

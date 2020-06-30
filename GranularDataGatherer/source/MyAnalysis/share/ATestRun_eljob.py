@@ -46,7 +46,7 @@ from AnaAlgorithm.DualUseConfig import addPrivateTool
 addPrivateTool( alg, 'grlTool', 'GoodRunsListSelectionTool' )
 
 # configure the properties of the GRL tool
-### TODO add year configurations here (short term just sent all GRL files to tool.
+### TODO add year configurations here (short term just sent all GRL files to tool).
 fullGRLFilePath = "GoodRunsLists/data16_13TeV/20180129/data16_13TeV.periodAllYear_DetStatus-v89-pro21-01_DQDefects-00-02-04_PHYS_StandardGRL_All_Good_25ns.xml"
 alg.grlTool.GoodRunsListVec = [ fullGRLFilePath ]
 alg.grlTool.PassThrough = 0 # if true (default) will ignore result of GRL and will just pass all events
@@ -54,8 +54,13 @@ alg.grlTool.PassThrough = 0 # if true (default) will ignore result of GRL and wi
 #Add SUSY tools to the algorithm
 addPrivateTool( alg, 'SUSYTools', 'ST::SUSYObjDef_xAOD' )
 #Set jet type to EMTopo for now (add option to change this).
-alg.SUSYTools.JetInputType = 1
+alg.SUSYTools.JetInputType = 1 # 1 EMTopo and 9 PFlow.
 alg.SUSYTools.DataSource = dataType
+
+#Add Jet cleaning tool to the algorithm.
+addPrivateTool( alg, 'cleaningTool', 'JetCleaningTool' )
+alg.cleaningTool.CutLevel = 'LooseBad'
+alg.cleaningTool.DoUgly = 0
 
 #Need to pass the PRW lumi calc files and configure the prw tool
 

@@ -4,11 +4,13 @@
 //AnalysisBase
 #include <AsgTools/ToolHandle.h>
 #include <AnaAlgorithm/AnaAlgorithm.h>
+#include <AsgTools/IAsgTool.h>
 // GRL
 #include <AsgAnalysisInterfaces/IGoodRunsListSelectionTool.h>
 //SUSY tools
 #include <SUSYTools/ISUSYObjDef_xAODTool.h>
-#include <AsgTools/IAsgTool.h>
+//Jet cleaning tool.
+#include <JetSelectorTools/JetCleaningTool.h>
 //Root 
 #include <TH1.h>
 #include <TTree.h>
@@ -36,6 +38,8 @@ private:
   ToolHandle<IGoodRunsListSelectionTool> m_grl;
   //SUSY tools handle
   ToolHandle<ST::ISUSYObjDef_xAODTool> m_SUSYTools;
+  //Jet cleaning tool handle
+  ToolHandle<JetCleaningTool> m_JetClean;
 
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number
