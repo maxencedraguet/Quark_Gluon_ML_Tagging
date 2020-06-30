@@ -6,6 +6,9 @@
 #include <AnaAlgorithm/AnaAlgorithm.h>
 // GRL
 #include <AsgAnalysisInterfaces/IGoodRunsListSelectionTool.h>
+//SUSY tools
+#include <SUSYTools/ISUSYObjDef_xAODTool.h>
+#include <AsgTools/IAsgTool.h>
 //Root 
 #include <TH1.h>
 #include <TTree.h>
@@ -31,6 +34,8 @@ private:
 
   //GRL tool handle
   ToolHandle<IGoodRunsListSelectionTool> m_grl;
+  //SUSY tools handle
+  ToolHandle<ST::ISUSYObjDef_xAODTool> m_SUSYTools;
 
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number
@@ -52,6 +57,7 @@ private:
   std::vector<float> *m_jetTrackWidthPt1000 = nullptr;
   std::vector<float> *m_jetEMFrac = nullptr;
   std::vector<float> *m_jetHECFrac = nullptr;
+  std::vector<float> *m_jetChFrac = nullptr;
 
   std::vector<float> *partE = nullptr;
   std::vector<float> *partPt = nullptr;

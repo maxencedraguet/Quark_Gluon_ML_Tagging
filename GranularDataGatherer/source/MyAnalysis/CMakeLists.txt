@@ -5,7 +5,14 @@ atlas_subdir (MyAnalysis)
 atlas_add_library (MyAnalysisLib
   MyAnalysis/*.h Root/*.cxx
   PUBLIC_HEADERS MyAnalysis
-  LINK_LIBRARIES AnaAlgorithmLib xAODEventInfo AsgAnalysisInterfaces xAODJet)
+  LINK_LIBRARIES AnaAlgorithmLib 
+                 xAODEventInfo 
+                 AsgAnalysisInterfaces 
+                 xAODJet
+                 SUSYToolsLib
+
+                 AsgTools
+                 )
 
 if (XAOD_STANDALONE)
  # Add the dictionary (for AnalysisBase only):

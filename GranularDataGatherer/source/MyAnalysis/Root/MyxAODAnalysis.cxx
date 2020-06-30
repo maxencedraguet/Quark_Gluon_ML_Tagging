@@ -10,22 +10,34 @@ MyxAODAnalysis :: MyxAODAnalysis (const std::string& name,
 { 
   // base variable initialisze
   declareProperty ("grlTool", m_grl, "the GRL tool");
+  declareProperty ("SUSYTools", m_SUSYTools);
 }
 
 StatusCode MyxAODAnalysis :: initialize ()
 {
-  //Tool initialisation.
-  ANA_CHECK (m_grl.retrieve());
+  /////////////////////////////////////////
+  //
+  // Tool Initialistaion.
+  //
+  /////////////////////////////////////////
 
-  //Book the tree and setup the branches.
+  ANA_CHECK (m_grl.retrieve());
+  ANA_CHECK (m_SUSYTools.retrieve());
+
+  /////////////////////////////////////////
+  //
+  // Book the tree and setup the branches.
+  //
+  /////////////////////////////////////////
+
   ANA_CHECK (book (TTree ("analysis", "My analysis ntuple")));
   TTree* mytree = tree ("analysis");
   mytree->Branch ("RunNumber", &m_runNumber);
   mytree->Branch ("EventNumber", &m_eventNumber);
  
+  //Jets
   m_jetCount = new std::vector<int>();
   mytree->Branch ("jetNumber", &m_jetCount);
-  //Basic Jet info
   m_jetMass = new std::vector<float>();
   mytree->Branch ("jetMass", &m_jetMass);
   m_jetEta = new std::vector<float>();
@@ -36,7 +48,6 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetPt", &m_jetPt);
   m_jetE = new std::vector<float>();
   mytree->Branch ("jetE", &m_jetE);
-  //Jet momentum
   m_jetNumTrkPt500= new std::vector<int>();
   mytree->Branch ("jetNumTrkPt500", &m_jetNumTrkPt500);
   m_jetNumTrkPt1000= new std::vector<int>(); 
@@ -53,9 +64,8 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetEMFrac", &m_jetEMFrac);
   m_jetHECFrac = new std::vector<float>();
   mytree->Branch ("jetHECFrac", &m_jetHECFrac);
-  //m_jetChFrac = new std::vector<float>();
-  //mytree->Branch ("jetChFrac", &m_jetChFrac);
-  //Not clear where to get the last one
+  m_jetChFrac = new std::vector<float>();
+  mytree->Branch ("jetChFrac", &m_jetChFrac);
 
   //Constituents entries
   partE = new std::vector<float>();
@@ -81,34 +91,12 @@ StatusCode MyxAODAnalysis :: initialize ()
 
 StatusCode MyxAODAnalysis :: execute ()
 {  
-  //Retrieve basic event information
-  const xAOD::EventInfo* ei = nullptr;
-  ANA_CHECK (evtStore()->retrieve (ei, "EventInfo"));
+  /////////////////////////////////////////
+  //
+  // Clear all vars (vectors first).
+  //
+  /////////////////////////////////////////
 
-  //Is it MC?
-  bool isMC = false;
-  if (ei->eventType (xAOD::EventInfo::IS_SIMULATION)) {
-    isMC = true;
-  }
-  ANA_MSG_INFO("is MC: " << isMC);
-
-  //Retrieve event and run number.
-  m_runNumber = ei->runNumber ();
-  m_eventNumber = ei->eventNumber ();
-
-  //Data needs to pass the GRL (Good Runs List) conditions.
-  if (!isMC) {
-    if (!m_grl->passRunLB(*ei)) {
-      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed GRL.");
-      return StatusCode::SUCCESS;
-    }       
-  }
-  
-  //Get EMTopo jets container (add option for other jet types later).
-  const xAOD::JetContainer* jets2 = nullptr;
-  ANA_CHECK (evtStore()->retrieve (jets2, "AntiKt4EMTopoJets"));
- 
-  //Clear all paramters, vectors first.
   //Jet vectors.
   m_jetMass->clear();
   m_jetEta->clear();
@@ -127,9 +115,9 @@ StatusCode MyxAODAnalysis :: execute ()
   //Jet calorimeter fractions.
   m_jetEMFrac->clear();
   m_jetHECFrac->clear();
-  //m_jetChFrac->clear();
+  m_jetChFrac->clear();
    
-  //Jet constituent values (EMTopo ONLY!) 
+  //Jet constituent values (EMTopo ONLY! Add PFlow EMTopo split.) 
   partE->clear();
   partPt->clear();
   partEta->clear();
@@ -146,65 +134,142 @@ StatusCode MyxAODAnalysis :: execute ()
   //Jet and parton counters.
   int counter_jet = 0;
   int counter_part= 0;
+
+  //vertexing
+  pvIndex = 0;
+
+  /////////////////////////////////////////
+  //
+  // Event Information.
+  //
+  /////////////////////////////////////////
+
+  const xAOD::EventInfo* ei = nullptr;
+  ANA_CHECK (evtStore()->retrieve (ei, "EventInfo"));
+
+  //Is it MC?
+  bool isMC = false;
+  if (ei->eventType (xAOD::EventInfo::IS_SIMULATION)) {
+    isMC = true;
+  }
+  ANA_MSG_INFO ("is MC: " << isMC);
+
+  //Retrieve event and run number.
+  m_runNumber = ei->runNumber ();
+  m_eventNumber = ei->eventNumber ();
+
+  //Data needs to pass the GRL (Good Runs List) conditions and filter out 
+  //errors in the various detector subsystems.
+  if (!isMC) {
+    if (!m_grl->passRunLB(*ei)) {
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed GRL.");
+      return StatusCode::SUCCESS;
+    }       
+    if ((ei->errorState(xAOD::EventInfo::Tile)==xAOD::EventInfo::Error)){
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed Tile.");
+      return StatusCode::SUCCESS;      
+    }
+    if ((ei->errorState(xAOD::EventInfo::LAr)==xAOD::EventInfo::Error)){
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed LAr.");
+      return StatusCode::SUCCESS;      
+    }
+    if ((ei->errorState(xAOD::EventInfo::SCT)==xAOD::EventInfo::Error)){
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed SCT.");
+      return StatusCode::SUCCESS;      
+    }    
+    if ((ei->isEventFlagBitSet(xAOD::EventInfo::Core, 18))){
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " incomplete.");
+      return StatusCode::SUCCESS;      
+    }    
+  }
+
+  //Get the primary vertex and its index.
+  const xAOD::Vertex* priVtx = m_SUSYTools->GetPrimVtx();
+  //Must have one primary vertex with more than two tracks or event is bad.
+  if (!priVtx || priVtx->nTrackParticles() < 2){
+    ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " failed vertex selection.");
+    return StatusCode::SUCCESS;
+  }
+  //Get the PV index (Maxence, usually we decorate here but there is no need
+  //as we are using it in the same algorithm).
+  pvIndex = priVtx->index();
+
+  //Debug messages to check status of primary vertex
+  ANA_MSG_DEBUG ("Primary vertex: " << pvIndex);
+  ANA_MSG_DEBUG ("PV nTrack: " << priVtx->nTrackParticles());
+
+  /////////////////////////////////////////
+  //
+  // Jets.
+  //
+  /////////////////////////////////////////
+
+  //Get EMTopo jets container (add option for other jet types later).
+  const xAOD::JetContainer* jets = nullptr;
+  ANA_CHECK (evtStore()->retrieve (jets, "AntiKt4EMTopoJets"));
+
+  //Make copy of container and apply calibrations using SUSY tools here.
  
-  for (const xAOD::Jet* jet : *jets2) {
+  for (const xAOD::Jet* jet : *jets) {
     counter_jet ++;
     //Push back all the main jet vector quantities.
 
-    m_jetEta->push_back (jet->eta ());
-    m_jetPhi->push_back (jet->phi ());
-    m_jetPt-> push_back (jet->pt () * 0.001);
-    m_jetE->  push_back (jet->e ()* 0.001);
+    m_jetEta->push_back(jet->eta());
+    m_jetPhi->push_back(jet->phi());
+    m_jetPt-> push_back(jet->pt() * 0.001);
+    m_jetE->push_back(jet->e()* 0.001);
     m_jetMass->push_back(jet->m());
     m_jetCount->push_back (counter_jet); //You probably don't need this.
+
+    //Calculate jet charge fraction.
+    m_jetChFrac->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex) / jet->pt());
+
+    //Fraction of jet energy from EM calo.
+    m_jetEMFrac->push_back(jet->getAttribute<float>("EMFrac"));
  
-
-
     //Push back all the jet substructure quantities.
-    //m_jetNumTrkPt500->push_back(jet->getAttribute<int>("NumTrkPt500"));
-    //m_jetNumTrkPt1000->push_back(jet->getAttribute<int>("NumTrkPt1000"));
-    //ANA_MSG_INFO("ntrack: " << m_jetNumTrkPt500 << " for jet Pt: " << jet->pt());
-    /*
-    std::vector<int> pobjs = jet->getAttribute<std::vector<int>>("NumTrkPt500");
-    std::vector<float> pobjs2 = jet->getAttribute<std::vector<float>>("SumPtTrkPt500");
+    m_jetNumTrkPt500->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex));
+    m_jetNumTrkPt1000->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt1000").at(pvIndex));
+
+    m_jetSumTrkPt500->push_back((jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex)) * 0.001);
+    //m_jetSumTrkPt1000->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt1000").at(pvIndex));
+
+    //No track width in this derivation? Try another?
+    //m_jetTrackWidthPt500->push_back(jet->getAttribute<std::vector<float>>("TrackWidthPt500").at(pvIndex));
+
+    //Debug string for jet track constituent variables, run in debug or change to INFO
+    //(can I just access the last pushback?).
+    ANA_MSG_DEBUG("Jet: " << counter_jet << " with pT: " << (jet->pt() * 0.001) 
+                         << " has nTrack(500): " 
+                         << jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex)
+                         << ", nTrack(1000): " 
+                         << jet->getAttribute<std::vector<int>>("NumTrkPt1000").at(pvIndex)                         
+                         << ", track sum Pt(500): "
+                         << (jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex) * 0.001));
+
+    //Kept these lines incase you wanted to use this method.
+    //std::vector<int> pobjs = jet->getAttribute<std::vector<int>>("NumTrkPt500");
+    //std::vector<float> pobjs2 = jet->getAttribute<std::vector<float>>("SumPtTrkPt500");
     //m_jetNumTrkPt500->push_back(jet->getAssociatedObjects<int> ( "NumTrkPt500") );
     
-    m_jetNumTrkPt1000->push_back(jet->getAttribute<int>( "NumTrkPt1000")); 
-
-    m_jetSumTrkPt500->push_back(jet->getAttribute<float>("SumPtTrkPt500"));
-    m_jetNumTrkPt1000->push_back(jet->getAttribute<float>("SumPtTrkPt1000"));
-
-    m_jetTrackWidthPt500->push_back(jet->getAttribute<float>("TrackWidthPt500"));
-    m_jetTrackWidthPt1000->push_back(jet->getAttribute<float>("TrackWidthPt1000"));
-    
-    m_jetEMFrac-> push_back(jet->getAttribute<float>("EMFrac"));
-    //m_jetHECFrac->push_back(jet->getAttribute<float>("HECFrac")); //problem is that it is non existent for AntiKt4EMTopoJets
-    ANA_MSG_INFO ("execute(): jet m_jetEMFrac "<< jet->getAttribute<float>("EMFrac"));
-    //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 = " << (jet->getAttribute<float>("SumPtTrkPt500")));
-    //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 = " << (jet->getAttribute<int>( "NumTrkPt500")));
-    //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 size= " <<pobjs.size());
-    //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 AT PV INDEX = " << jet->getAttribute<std::vector<int>>(xAOD::JetAttribute::NumTrkPt500).at(pvIndex) );
-    for (unsigned i=0; i<pobjs.size(); ++i)
-    	ANA_MSG_INFO ("execute(): m_jetNumTrkPt500 " << pobjs[i]);
-    
-    ANA_MSG_INFO ("execute(): jet m_jetSumTrkPt500 size= " <<pobjs2.size());
-    for (unsigned i=0; i<pobjs2.size(); ++i)
-        ANA_MSG_INFO ("execute(): m_jetSumTrkPt500 " << pobjs2[i]);
-    //ANA_MSG_INFO ("execute(): jet eta= " << jet->eta());
-    //ANA_MSG_INFO ("execute(): jet phi= " << jet->phi());
-    */ 
-    //qg nTrack tagger
+    //Can add in jet qg tagger.
     /*
     ATH_MSG_DEBUG( "Entering qg tagger" );
     Root::TAccept qg_taccept = m_qgTagger->tag( *jet, nullptr );
     isnTrkQuark.push_back(qg_taccept.getCutResult(4));
     */
 
+    /////////////////////////////////////////
+    //
+    // Jet Contituents.
+    //
+    /////////////////////////////////////////
+
     counter_part = 0;
     const xAOD::JetConstituentVector cons = jet->getConstituents();
     for (auto cluster_itr : cons){
         counter_part ++;
-        ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
+        //ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
         partE->push_back(cluster_itr->e() * 0.001);
     	  partPt->push_back(cluster_itr->pt() * 0.001);
     	  partEta->push_back(cluster_itr->eta());
@@ -229,9 +294,11 @@ StatusCode MyxAODAnalysis :: execute ()
 	ANA_MSG_INFO ("execute(): constitutent to jet dR= " << dR);
 	*/
     }
-    ANA_MSG_INFO("For jet at counter: " << counter_jet);
-    for(int part_it = 0; part_it < partE->size(); part_it++){  
-      ANA_MSG_INFO("parton energy vector for jet: " << partE->at(part_it)); 
+
+    //Better to use this method instead?
+    //ANA_MSG_INFO("For jet at counter: " << counter_jet);
+    for(long unsigned int part_it = 0; part_it < partE->size(); part_it++){  
+      ANA_MSG_DEBUG("parton energy vector for jet: " << partE->at(part_it)); 
     }
   }
 
