@@ -25,7 +25,7 @@ sh.printContent()
 # Create an EventLoop job.
 job = ROOT.EL.Job()
 job.sampleHandler( sh )
-job.options().setDouble( ROOT.EL.Job.optMaxEvents, 10 )
+#job.options().setDouble( ROOT.EL.Job.optMaxEvents, 10 )
 job.options().setString( ROOT.EL.Job.optSubmitDirMode, 'unique-link')
 job.outputAdd (ROOT.EL.OutputStream ('ANALYSIS'))
 # Create the algorithm's configuration.

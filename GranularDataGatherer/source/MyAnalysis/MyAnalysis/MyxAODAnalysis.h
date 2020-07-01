@@ -49,6 +49,9 @@ private:
 
   std::vector<float> *partE = nullptr;
   std::vector<float> *partPt = nullptr;
+  std::vector<float> *partPx = nullptr;
+  std::vector<float> *partPy = nullptr;
+  std::vector<float> *partPz = nullptr;
   std::vector<float> *partEta = nullptr;
   std::vector<float> *partPhi = nullptr;
   std::vector<float> *partMass = nullptr;

@@ -67,6 +67,12 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("constituentE", &partE);
   partPt = new std::vector<float>();
   mytree->Branch ("constituentPt", &partPt);
+  partPx = new std::vector<float>();
+  mytree->Branch ("constituentPx", &partPx);
+  partPy = new std::vector<float>();
+  mytree->Branch ("constituentPy", &partPy);
+  partPz = new std::vector<float>();
+  mytree->Branch ("constituentPz", &partPz);
   partEta = new std::vector<float>();
   mytree->Branch ("constituentEta", &partEta);
   partPhi = new std::vector<float>();
@@ -126,6 +132,9 @@ StatusCode MyxAODAnalysis :: execute ()
 
   partE->clear();
   partPt->clear();
+  partPx->clear();
+  partPy->clear();
+  partPz->clear();
   partEta->clear();
   partPhi->clear();
   partMass->clear();
@@ -138,14 +147,13 @@ StatusCode MyxAODAnalysis :: execute ()
   //partRunNumber->clear();
   //partEventNumber->clear();
  for (const xAOD::Jet* jet : *jets2) {
-    counter_jet ++;
 
     //ANA_MSG_INFO ("execute(): B jet "<< cacc_bjet(*jet) );
     m_jetEta->push_back (jet->eta ());
     m_jetPhi->push_back (jet->phi ());
     m_jetPt-> push_back (jet->pt () * 0.001);
     m_jetE->  push_back (jet->e ()* 0.001);
-    m_jetMass->push_back(jet->m());
+    m_jetMass->push_back(jet->m()* 0.001);
     m_jetCount->push_back (counter_jet);
     //std::vector<const int*> pobjs  
     std::vector<int> pobjs = jet->getAttribute<std::vector<int>>("NumTrkPt500");
@@ -162,17 +170,17 @@ StatusCode MyxAODAnalysis :: execute ()
     */
     m_jetEMFrac-> push_back(jet->getAttribute<float>("EMFrac"));
     //m_jetHECFrac->push_back(jet->getAttribute<float>("HECFrac")); //problem is that it is non existent for AntiKt4EMTopoJets
-    ANA_MSG_INFO ("execute(): jet m_jetEMFrac "<< jet->getAttribute<float>("EMFrac"));
+    //ANA_MSG_INFO ("execute(): jet m_jetEMFrac "<< jet->getAttribute<float>("EMFrac"));
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 = " << (jet->getAttribute<float>("SumPtTrkPt500")));
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 = " << (jet->getAttribute<int>( "NumTrkPt500")));
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 size= " <<pobjs.size());
     //ANA_MSG_INFO ("execute(): jet m_jetNumTrkPt500 AT PV INDEX = " << jet->getAttribute<std::vector<int>>(xAOD::JetAttribute::NumTrkPt500).at(pvIndex) );
-    for (unsigned i=0; i<pobjs.size(); ++i)
-    	ANA_MSG_INFO ("execute(): m_jetNumTrkPt500 " << pobjs[i]);
+    //for (unsigned i=0; i<pobjs.size(); ++i)
+    	//ANA_MSG_INFO ("execute(): m_jetNumTrkPt500 " << pobjs[i]);
    
-    ANA_MSG_INFO ("execute(): jet m_jetSumTrkPt500 size= " <<pobjs2.size());
-    for (unsigned i=0; i<pobjs2.size(); ++i)
-        ANA_MSG_INFO ("execute(): m_jetSumTrkPt500 " << pobjs2[i]);
+    //ANA_MSG_INFO ("execute(): jet m_jetSumTrkPt500 size= " <<pobjs2.size());
+    //for (unsigned i=0; i<pobjs2.size(); ++i)
+    //    ANA_MSG_INFO ("execute(): m_jetSumTrkPt500 " << pobjs2[i]);
     //ANA_MSG_INFO ("execute(): jet eta= " << jet->eta());
     //ANA_MSG_INFO ("execute(): jet phi= " << jet->phi());
      
@@ -186,13 +194,15 @@ StatusCode MyxAODAnalysis :: execute ()
     counter_part = 0;
     const xAOD::JetConstituentVector cons = jet->getConstituents();
     for (auto cluster_itr : cons){
-        counter_part ++;
-        ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
+        //ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
         partE->push_back(cluster_itr->e() * 0.001);
     	partPt->push_back(cluster_itr->pt() * 0.001);
+        partPx->push_back(cluster_itr->px() * 0.001);
+        partPy->push_back(cluster_itr->py() * 0.001);
+        partPz->push_back(cluster_itr->pz() * 0.001);
     	partEta->push_back(cluster_itr->eta());
     	partPhi->push_back(cluster_itr->phi());
-        partMass->push_back(cluster_itr->m());
+        partMass->push_back(cluster_itr->m()* 0.001);
         partJetCount->push_back(counter_jet);
         partRunNumber->push_back(m_runNumber);
         partEventNumber->push_back(m_eventNumber);	
@@ -210,7 +220,9 @@ StatusCode MyxAODAnalysis :: execute ()
     	ANA_MSG_INFO ("execute(): constitutent jet phi= " << cluster_itr->phi());
 	ANA_MSG_INFO ("execute(): constitutent to jet dR= " << dR);
 	*/
-    }   
+        counter_part ++;
+    }
+    counter_jet ++;
   }
   tree ("analysis")->Fill ();
   
@@ -241,6 +253,9 @@ MyxAODAnalysis::~MyxAODAnalysis(){
 
   delete partE;
   delete partPt;
+  delete partPx;
+  delete partPy;
+  delete partPz;
   delete partPhi;
   delete partEta;
   delete partMass;

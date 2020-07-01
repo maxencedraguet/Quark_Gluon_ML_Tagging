@@ -21,7 +21,8 @@ sh = ROOT.SH.SampleHandler()
 sh.setMetaString( 'nc_tree', 'CollectionTree' )
 #inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128"
 #ROOT.SH.ScanDir().filePattern( 'DAOD_JETM6.20933895._001089.pool.root.1' ).scan( sh, inputFilePath )
-ROOT.SH.scanRucio (sh, "mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128")
+#ROOT.SH.scanRucio (sh, "mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128")
+ROOT.SH.scanRucio (sh, "data16_13TeV.periodAllYear.physics_Main.PhysCont.DAOD_ZMUMU.repro21_v01")
 sh.printContent()
 
 # Create an EventLoop job.
@@ -44,7 +45,8 @@ alg = createAlgorithm ( 'MyxAODAnalysis', 'AnalysisAlg' )
 job.algsAdd( alg )
 
 # Run the job using the direct driver.
-#driver = ROOT.EL.DirectDriver()
-driver = ROOT.EL.PrunDriver()
-driver.options().setString("nc_outputSampleName", "user.mdraguet.testLatest2.%in:name[2]%.%in:name[6]%");
+driver = ROOT.EL.DirectDriver()
+#driver = ROOT.EL.PrunDriver()
+driver.options().setString("nc_outputSampleName", "user.mdraguet.testLatest7.%in:name[2]%.%in:name[6]%");
+
 driver.submit( job, options.submission_dir )
