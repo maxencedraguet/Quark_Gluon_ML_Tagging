@@ -51,6 +51,8 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetPt", &m_jetPt);
   m_jetE = new std::vector<float>();
   mytree->Branch ("jetE", &m_jetE);
+  m_jetWidth = new std::vector<float>();
+  mytree->Branch ("m_jetWidth", &m_jetWidth);
 
   //Jet quality cuts.
   isBadJet = new std::vector<char>();
@@ -74,9 +76,9 @@ StatusCode MyxAODAnalysis :: initialize ()
 
   
   //Jet constituents
-  m_jetNumTrkPt500= new std::vector<int>();
+  m_jetNumTrkPt500 = new std::vector<int>();
   mytree->Branch ("jetNumTrkPt500", &m_jetNumTrkPt500);
-  m_jetNumTrkPt1000= new std::vector<int>(); 
+  m_jetNumTrkPt1000 = new std::vector<int>(); 
   mytree->Branch ("jetNumTrkPt1000", &m_jetNumTrkPt1000);
   m_jetSumTrkPt500 = new std::vector<float>();
   mytree->Branch ("jetSumTrkPt500", &m_jetSumTrkPt500);
@@ -84,8 +86,10 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetSumTrkPt1000", &m_jetSumTrkPt1000);
   m_jetTrackWidthPt500 = new std::vector<float>();
   mytree->Branch ("jetTrackWidthPt500", &m_jetTrackWidthPt500);
-  m_jetTrackWidthPt1000 = new std::vector<float>();
+  m_jetTrackWidthPt1000 = new std::vector<std::vector<float>>();
   mytree->Branch ("jetTrackWidthPt1000", &m_jetTrackWidthPt1000);
+  partonID = new std::vector<int>();
+  mytree->Branch ("partonID", &partonID);
 
   //Calorimeter variables
   m_jetEMFrac = new std::vector<float>();
@@ -145,6 +149,7 @@ StatusCode MyxAODAnalysis :: execute ()
   m_jetPhi->clear();
   m_jetPt->clear();
   m_jetE->clear();
+  m_jetWidth->clear();
 
   //Jet quality and tagging.
   isBJet->clear();
@@ -164,6 +169,7 @@ StatusCode MyxAODAnalysis :: execute ()
   m_jetSumTrkPt1000->clear();
   m_jetTrackWidthPt500->clear();
   m_jetTrackWidthPt1000->clear();
+  partonID->clear();
   
   //Jet calorimeter fractions.
   m_jetEMFrac->clear();
@@ -226,7 +232,7 @@ StatusCode MyxAODAnalysis :: execute ()
       return StatusCode::SUCCESS;      
     }    
     if ((ei->isEventFlagBitSet(xAOD::EventInfo::Core, 18))){
-      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " incomplete.");
+      ANA_MSG_INFO ("Event: " << m_runNumber << m_eventNumber << " incomplete event.");
       return StatusCode::SUCCESS;      
     }    
   }
@@ -243,8 +249,8 @@ StatusCode MyxAODAnalysis :: execute ()
   pvIndex = priVtx->index();
 
   //Debug messages to check status of primary vertex
-  ANA_MSG_INFO ("Primary vertex: " << pvIndex);
-  ANA_MSG_INFO ("PV nTrack: " << priVtx->nTrackParticles());
+  ANA_MSG_DEBUG("Primary vertex: " << pvIndex);
+  ANA_MSG_DEBUG("PV nTrack: " << priVtx->nTrackParticles());
 
   /////////////////////////////////////////
   //
@@ -286,8 +292,14 @@ StatusCode MyxAODAnalysis :: execute ()
     m_jetPhi->push_back(jet->phi());
     m_jetPt-> push_back(jet->pt() * 0.001);
     m_jetE->push_back(jet->e() * 0.001);
+    m_jetWidth->push_back(jet->getAttribute<float>("Width"));
     m_jetMass->push_back(jet->m() * 0.001); //DOES THIS NEED TO BE CONVERTED?
     m_jetCount->push_back (counter_jet); //You probably don't need this.
+
+    //Truth information.
+    if (isMC) {
+      partonID->push_back(jet->getAttribute<int>("PartonTruthLabelID"));
+    }
 
     //Calculate jet charge fraction.
     m_jetChFrac->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex) / jet->pt());
@@ -296,6 +308,7 @@ StatusCode MyxAODAnalysis :: execute ()
     m_jetEMFrac->push_back(jet->getAttribute<float>("EMFrac"));
 
     //Hadronic calorimeter fraction.
+    //m_jetHECFrac->push_back(jet->getAttribute<float>("HECFrac"));
  
     //Push back all the jet substructure quantities.
     m_jetNumTrkPt500->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex));
@@ -305,7 +318,7 @@ StatusCode MyxAODAnalysis :: execute ()
     //m_jetSumTrkPt1000->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt1000").at(pvIndex));
 
     //No track width in this derivation? Try another?
-    //m_jetTrackWidthPt500->push_back(jet->getAttribute<std::vector<float>>("TrackWidthPt500").at(pvIndex));
+    m_jetTrackWidthPt1000->push_back(jet->getAttribute<std::vector<float>>("TrackWidthPt1000"));
 
     //Debug string for jet track constituent variables, run in debug or change to INFO
     //(can I just access the last pushback?).
@@ -383,6 +396,7 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete m_jetPhi;
   delete m_jetPt;
   delete m_jetE;
+  delete m_jetWidth;
   
   delete isBadJet;
   delete isBaselineJet;
@@ -400,6 +414,7 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete m_jetSumTrkPt1000;
   delete m_jetTrackWidthPt500;
   delete m_jetTrackWidthPt1000;
+  delete partonID;
   delete m_jetEMFrac;
   delete m_jetHECFrac;
 

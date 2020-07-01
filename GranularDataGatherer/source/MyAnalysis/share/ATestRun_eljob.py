@@ -22,10 +22,10 @@ ROOT.xAOD.Init().ignore()
 import os
 sh = ROOT.SH.SampleHandler()
 sh.setMetaString( 'nc_tree', 'CollectionTree' )
-#inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128"
+inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128"
 #ROOT.SH.ScanDir().filePattern( 'DAOD_JETM6.20933895._001089.pool.root.1' ).scan( sh, inputFilePath )
 
-inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/data16_13TeV.periodF.physics_Main.PhysCont.DAOD_JETM6.grp16_v01_p4129"
+#inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/data16_13TeV.periodF.physics_Main.PhysCont.DAOD_JETM6.grp16_v01_p4129"
 ROOT.SH.ScanDir().filePattern( '*' ).scan( sh, inputFilePath )
 sh.printContent()
 
