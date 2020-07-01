@@ -38,8 +38,6 @@ private:
   ToolHandle<IGoodRunsListSelectionTool> m_grl;
   //SUSY tools handle
   ToolHandle<ST::ISUSYObjDef_xAODTool> m_SUSYTools;
-  //Jet cleaning tool handle
-  ToolHandle<JetCleaningTool> m_JetClean;
 
   unsigned int m_runNumber = 0; ///< Run number
   unsigned long long m_eventNumber = 0; ///< Event number
@@ -52,6 +50,17 @@ private:
   std::vector<float> *m_jetPhi = nullptr;
   std::vector<float> *m_jetPt = nullptr;
   std::vector<float> *m_jetE = nullptr;
+
+  std::vector<char> *isBadJet = nullptr;
+  std::vector<char> *isBaselineJet = nullptr;
+  std::vector<char> *isSignalJet = nullptr;
+  std::vector<char> *isBJet = nullptr;
+  std::vector<char> *passJvt = nullptr;
+  std::vector<char> *passfJvt = nullptr;
+
+  std::vector<float> *JvtScore = nullptr;
+  std::vector<float> *fJvtScore = nullptr;
+  std::vector<double> *btag_weight = nullptr;
 
   std::vector<int> *m_jetNumTrkPt500 = nullptr;
   std::vector<int> *m_jetNumTrkPt1000 = nullptr;
@@ -70,8 +79,6 @@ private:
   std::vector<float> *partMass = nullptr;
   std::vector<float> *partDeltaR = nullptr;
   std::vector<int> *partJetCount = nullptr;
-  std::vector<int> *partRunNumber = nullptr;
-  std::vector<int> *partEventNumber = nullptr;
 
   //bool c_isMC;
 };

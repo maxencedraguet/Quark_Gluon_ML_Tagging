@@ -8,14 +8,12 @@ MyxAODAnalysis :: MyxAODAnalysis (const std::string& name,
                                   ISvcLocator *pSvcLocator)
     : EL::AnaAlgorithm (name, pSvcLocator),
     m_grl ("GoodRunsListSelectionTool/grl", this),
-    m_SUSYTools ("ST::ISUSYObjDef_xAODTool/SUSYTools", this),
-    m_JetClean ("JetCleaningTool/JetClean", this)
+    m_SUSYTools ("ST::ISUSYObjDef_xAODTool/SUSYTools", this)
 
 { 
   // base variable initialisze
   declareProperty ("grlTool", m_grl, "the GRL tool");
   declareProperty ("SUSYTools", m_SUSYTools);
-  declareProperty ("cleaningTool", m_JetClean);
 }
 
 StatusCode MyxAODAnalysis :: initialize ()
@@ -28,7 +26,6 @@ StatusCode MyxAODAnalysis :: initialize ()
 
   ANA_CHECK (m_grl.retrieve());
   ANA_CHECK (m_SUSYTools.retrieve());
-  ANA_CHECK (m_JetClean.retrieve());
 
   /////////////////////////////////////////
   //
@@ -54,6 +51,29 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetPt", &m_jetPt);
   m_jetE = new std::vector<float>();
   mytree->Branch ("jetE", &m_jetE);
+
+  //Jet quality cuts.
+  isBadJet = new std::vector<char>();
+  mytree->Branch ("isBadJet", &isBadJet);
+  isBaselineJet = new std::vector<char>();
+  mytree->Branch ("isBaselineJet", &isBaselineJet);
+  isSignalJet = new std::vector<char>();
+  mytree->Branch ("isSignalJet", &isSignalJet);
+  isBJet = new std::vector<char>();
+  mytree->Branch ("isBJet", &isBJet);
+  passJvt = new std::vector<char>();
+  mytree->Branch ("passJvt", &passJvt);
+  passfJvt = new std::vector<char>();
+  mytree->Branch ("passfJvt", &passfJvt);
+  JvtScore = new std::vector<float>();
+  mytree->Branch ("JvtScore", &JvtScore);
+  fJvtScore = new std::vector<float>();
+  mytree->Branch ("fJvtScore", &fJvtScore);
+  btag_weight = new std::vector<double>();
+  mytree->Branch ("btag_weight", &btag_weight);
+
+  
+  //Jet constituents
   m_jetNumTrkPt500= new std::vector<int>();
   mytree->Branch ("jetNumTrkPt500", &m_jetNumTrkPt500);
   m_jetNumTrkPt1000= new std::vector<int>(); 
@@ -66,6 +86,8 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetTrackWidthPt500", &m_jetTrackWidthPt500);
   m_jetTrackWidthPt1000 = new std::vector<float>();
   mytree->Branch ("jetTrackWidthPt1000", &m_jetTrackWidthPt1000);
+
+  //Calorimeter variables
   m_jetEMFrac = new std::vector<float>();
   mytree->Branch ("jetEMFrac", &m_jetEMFrac);
   m_jetHECFrac = new std::vector<float>();
@@ -88,10 +110,7 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("constituentDeltaRtoJet", &partDeltaR);
   partJetCount = new std::vector<int>();
   mytree->Branch ("constituentJet", &partJetCount);
-  partRunNumber  = new std::vector<int>();
-  mytree->Branch ("constituentRunNumber", &partRunNumber);
-  partEventNumber = new std::vector<int>();
-  mytree->Branch ("constituentEventNumber", &partEventNumber);
+
   return StatusCode::SUCCESS;
 }
 
@@ -103,10 +122,16 @@ StatusCode MyxAODAnalysis :: execute ()
   //
   /////////////////////////////////////////
 
-  //SUSY Tools Accessors.
+  //SUSY Tools Accessors (these are available after 'GetJets()' method).
   static SG::AuxElement::ConstAccessor<char> cacc_bad("bad");
   static SG::AuxElement::ConstAccessor<char> cacc_baseline("baseline");
-  const static SG::AuxElement::ConstAccessor<char> acc_signal("signal");
+  static SG::AuxElement::ConstAccessor<char> cacc_signal("signal");
+  static SG::AuxElement::ConstAccessor<char> cacc_bjet("bjet");
+  static SG::AuxElement::ConstAccessor<char> cacc_passJvt("passJvt");
+  static SG::AuxElement::ConstAccessor<char> cacc_passFJvt("passFJvt");
+  static SG::AuxElement::ConstAccessor<float> cacc_jvt("Jvt");
+  static SG::AuxElement::ConstAccessor<float> cacc_fjvt("fJvt");
+  static SG::AuxElement::ConstAccessor<double> cacc_btag_weight("btag_weight");
 
   /////////////////////////////////////////
   //
@@ -120,6 +145,17 @@ StatusCode MyxAODAnalysis :: execute ()
   m_jetPhi->clear();
   m_jetPt->clear();
   m_jetE->clear();
+
+  //Jet quality and tagging.
+  isBJet->clear();
+  isBaselineJet->clear();
+  isSignalJet->clear();
+  isBJet->clear();
+  passJvt->clear();
+  passfJvt->clear();
+  JvtScore->clear();
+  fJvtScore->clear();
+  btag_weight->clear();
  
   //Jet track associated values.
   m_jetNumTrkPt500->clear();
@@ -142,11 +178,6 @@ StatusCode MyxAODAnalysis :: execute ()
   partMass->clear();
   partJetCount->clear();
   partDeltaR->clear();
-  partRunNumber->clear();
-  partEventNumber->clear();
-  //partConstituentCount->clear();
-  //partRunNumber->clear();
-  //partEventNumber->clear();
 
   //Jet and parton counters.
   int counter_jet = 0;
@@ -237,21 +268,16 @@ StatusCode MyxAODAnalysis :: execute ()
 
   //Loop over the shallow copied jets.
   for (auto jet : *jets_nominal) {
-
-    //auto cleanJet = m_JetClean->keep(*jet);
-    //ANA_MSG_INFO('Jet pass: ' << cleanJet);
-    
-    if (cacc_bad(*jet)){
-      ANA_MSG_INFO("Has bad jet");
-    }
-
-    if (cacc_baseline(*jet)){
-      ANA_MSG_INFO("isBaseline");
-    }
-    
-    if (acc_signal(*jet)){
-      ANA_MSG_INFO("isSignal");
-    }
+    //Jet quality and tagging quantities.
+    isBadJet->push_back(cacc_bad(*jet));
+    isBaselineJet->push_back(cacc_baseline(*jet));
+    isSignalJet->push_back(cacc_signal(*jet));
+    isBJet->push_back(cacc_bjet(*jet));
+    passJvt->push_back(cacc_passJvt(*jet));
+    passfJvt->push_back(cacc_passFJvt(*jet));
+    JvtScore->push_back(cacc_jvt(*jet));
+    fJvtScore->push_back(cacc_fjvt(*jet));
+    btag_weight->push_back(cacc_btag_weight(*jet));
 
     counter_jet ++;
     
@@ -268,6 +294,8 @@ StatusCode MyxAODAnalysis :: execute ()
 
     //Fraction of jet energy from EM calo.
     m_jetEMFrac->push_back(jet->getAttribute<float>("EMFrac"));
+
+    //Hadronic calorimeter fraction.
  
     //Push back all the jet substructure quantities.
     m_jetNumTrkPt500->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex));
@@ -290,18 +318,6 @@ StatusCode MyxAODAnalysis :: execute ()
                          << ", track sum Pt(500): "
                          << (jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex) * 0.001));
 
-    //Kept these lines incase you wanted to use this method.
-    //std::vector<int> pobjs = jet->getAttribute<std::vector<int>>("NumTrkPt500");
-    //std::vector<float> pobjs2 = jet->getAttribute<std::vector<float>>("SumPtTrkPt500");
-    //m_jetNumTrkPt500->push_back(jet->getAssociatedObjects<int> ( "NumTrkPt500") );
-    
-    //Can add in jet qg tagger.
-    /*
-    ATH_MSG_DEBUG( "Entering qg tagger" );
-    Root::TAccept qg_taccept = m_qgTagger->tag( *jet, nullptr );
-    isnTrkQuark.push_back(qg_taccept.getCutResult(4));
-    */
-
     /////////////////////////////////////////
     //
     // Jet Contituents.
@@ -319,9 +335,7 @@ StatusCode MyxAODAnalysis :: execute ()
     	  partPhi->push_back(cluster_itr->phi());
         partMass->push_back(cluster_itr->m() * 0.001);
 
-	      partJetCount->push_back(counter_jet);
-        partRunNumber->push_back(m_runNumber);
-        partEventNumber->push_back(m_eventNumber);	
+	      partJetCount->push_back(counter_jet);	
 
 	      //Compute delta R between consitutent and Jet
         Double_t deta = cluster_itr->eta() - jet->eta ();
@@ -343,7 +357,13 @@ StatusCode MyxAODAnalysis :: execute ()
     for(long unsigned int part_it = 0; part_it < partE->size(); part_it++){  
       ANA_MSG_DEBUG("parton energy vector for jet: " << partE->at(part_it)); 
     }
-  }
+  } //End Jet Loop
+
+  /////////////////////////////////////////
+  //
+  // Muons.
+  //
+  /////////////////////////////////////////
 
   tree ("analysis")->Fill ();
   
@@ -363,6 +383,17 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete m_jetPhi;
   delete m_jetPt;
   delete m_jetE;
+  
+  delete isBadJet;
+  delete isBaselineJet;
+  delete isSignalJet;
+  delete isBJet;
+  delete passJvt;
+  delete passfJvt;
+  delete JvtScore;
+  delete fJvtScore;
+  delete btag_weight;
+
   delete m_jetNumTrkPt500;
   delete m_jetNumTrkPt1000;
   delete m_jetSumTrkPt500;
@@ -379,6 +410,4 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete partMass;
   delete partJetCount;
   delete partDeltaR;
-  delete partRunNumber; 
-  delete partEventNumber;
 }

@@ -57,12 +57,7 @@ addPrivateTool( alg, 'SUSYTools', 'ST::SUSYObjDef_xAOD' )
 alg.SUSYTools.JetInputType = 1 # 1 EMTopo and 9 PFlow.
 alg.SUSYTools.DataSource = dataType
 
-#Add Jet cleaning tool to the algorithm.
-addPrivateTool( alg, 'cleaningTool', 'JetCleaningTool' )
-alg.cleaningTool.CutLevel = 'LooseBad'
-alg.cleaningTool.DoUgly = 0
-
-#Need to pass the PRW lumi calc files and configure the prw tool
+#Need to pass the PRW lumi calc files and configure the prw tool with STs
 
 # Add our algorithm to the job
 job.algsAdd( alg )
