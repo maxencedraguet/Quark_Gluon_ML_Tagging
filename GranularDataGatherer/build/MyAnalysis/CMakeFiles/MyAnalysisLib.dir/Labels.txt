@@ -1,6 +1,0 @@
-# Target labels
- MyAnalysis
-# Source files and their labels
-/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/MyAnalysis/MyAnalysisDict.h
-/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/MyAnalysis/MyxAODAnalysis.h
-/home/draguet/QGdis/GranularDataGatherer/source/MyAnalysis/Root/MyxAODAnalysis.cxx

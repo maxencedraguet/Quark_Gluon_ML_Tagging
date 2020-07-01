@@ -1,5 +1,0 @@
-# Target labels
- MyAnalysis
-# Source files and their labels
-/home/draguet/QGdis/GranularDataGatherer/build/x86_64-centos7-gcc8-opt/include/MyAnalysis
-/home/draguet/QGdis/GranularDataGatherer/build/x86_64-centos7-gcc8-opt/include/MyAnalysis.rule

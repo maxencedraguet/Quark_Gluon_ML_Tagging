@@ -6,3 +6,6 @@ experiments/results/*
 # IDE
 .vscode
 *.DS_Store
+# Build and run directories
+**/build/
+**/run/
