@@ -30,10 +30,6 @@
     * Global effect of the cut
         * Jet tables goes from 482,797 to 147,388 entries  (reduction factor: 30.5% )
         * Constituents tables goes from 6,001,431 to 2,361,307 entries (reduction factor: 39.3%)
-    Initial shape jet  (482797, 17)
-    Final shape jet  (147388, 17)
-    Initial shape constituent  (6001431, 14)
-    Final shape constituent  (2361307, 16)
     * Left: the number of constituents per jet.. Right: the number of constituents per jet WITH cuts.
     <p float="center">
     <img src="Readme_Result/Diag_no_cut/CounterElem.png" width="350" />
@@ -68,6 +64,18 @@
     <p float="center">
     <img src="Readme_Result/Diag_cut/differenceEnergy_log.png" width="350" />
     <img src="Readme_Result/Diag_cut/differencePx_log.png" width="350" />
+    </p>
+    
+    * There are some jets that have a large energy difference compared to the sum of their constituents. This has already been somewhat corrected compared to the no cut case. Left is the energy difference without cuts and right with cuts (as above)
+    <p float="center">
+    <img src="Readme_Result/Diag_no_cut/differenceEnergy_log.png" width="350" />
+    <img src="Readme_Result/Diag_cut/differenceEnergy_log.png" width="350" />
+    </p>
+    
+    * To investigate, I tried a more conservative jet cut (as above but removing events with less than 6 components) shown right here (left is the 4-component cut) which slightly improved things but not by a lot. 
+    <p float="center">
+    <img src="Readme_Result/Diag_cut/differenceEnergy_log.png" width="350" />
+    <img src="Readme_Result/Diag_cut_6/differenceEnergy_log.png" width="350" />
     </p>
     
 
