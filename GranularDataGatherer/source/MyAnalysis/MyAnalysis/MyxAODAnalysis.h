@@ -51,7 +51,8 @@ private:
   std::vector<float> *m_jetPt = nullptr;
   std::vector<float> *m_jetE = nullptr;
   std::vector<float> *m_jetWidth = nullptr;
-
+  std::vector<int> *m_jetNumberConstituent = nullptr;
+    
   std::vector<char> *isBadJet = nullptr;
   std::vector<char> *isBaselineJet = nullptr;
   std::vector<char> *isSignalJet = nullptr;
@@ -66,6 +67,7 @@ private:
   std::vector<int> *m_jetNumTrkPt500 = nullptr;
   std::vector<int> *m_jetNumTrkPt1000 = nullptr;
   std::vector<int> *partonID = nullptr;
+  std::vector<int> *isTruthQuark = nullptr;
   std::vector<float> *m_jetSumTrkPt500 = nullptr;
   std::vector<float> *m_jetSumTrkPt1000 = nullptr;
   std::vector<float> *m_jetTrackWidthPt500 = nullptr;

@@ -52,7 +52,9 @@ StatusCode MyxAODAnalysis :: initialize ()
   m_jetE = new std::vector<float>();
   mytree->Branch ("jetE", &m_jetE);
   m_jetWidth = new std::vector<float>();
-  mytree->Branch ("m_jetWidth", &m_jetWidth);
+  mytree->Branch ("jetWidth", &m_jetWidth);
+  m_jetNumberConstituent = new std::vector<int>();
+  mytree->Branch ("jetNumberConstituent", &m_jetNumberConstituent);
 
   //Jet quality cuts.
   isBadJet = new std::vector<char>();
@@ -88,8 +90,12 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetTrackWidthPt500", &m_jetTrackWidthPt500);
   m_jetTrackWidthPt1000 = new std::vector<std::vector<float>>();
   mytree->Branch ("jetTrackWidthPt1000", &m_jetTrackWidthPt1000);
+    
+  isTruthQuark= new std::vector<int>();
+  mytree->Branch ("isTruthQuark", &isTruthQuark);
   partonID = new std::vector<int>();
   mytree->Branch ("partonID", &partonID);
+
 
   //Calorimeter variables
   m_jetEMFrac = new std::vector<float>();
@@ -159,7 +165,9 @@ StatusCode MyxAODAnalysis :: execute ()
   m_jetPt->clear();
   m_jetE->clear();
   m_jetWidth->clear();
-
+  m_jetCount->clear();
+  m_jetNumberConstituent->clear();
+    
   //Jet quality and tagging.
   isBJet->clear();
   isBaselineJet->clear();
@@ -179,6 +187,7 @@ StatusCode MyxAODAnalysis :: execute ()
   m_jetTrackWidthPt500->clear();
   m_jetTrackWidthPt1000->clear();
   partonID->clear();
+  isTruthQuark->clear();
   
   //Jet calorimeter fractions.
   m_jetEMFrac->clear();
@@ -303,15 +312,25 @@ StatusCode MyxAODAnalysis :: execute ()
     //Push back all the main jet vector quantities.
     m_jetEta->push_back(jet->eta());
     m_jetPhi->push_back(jet->phi());
-    m_jetPt-> push_back(jet->pt() * 0.001);
-    m_jetE->push_back(jet->e() * 0.001);
+    m_jetPt-> push_back(jet->pt());
+    m_jetE->push_back(jet->e());
     m_jetWidth->push_back(jet->getAttribute<float>("Width"));
-    m_jetMass->push_back(jet->m() * 0.001); //DOES THIS NEED TO BE CONVERTED?
-    m_jetCount->push_back (counter_jet); //You probably don't need this.
+    m_jetMass->push_back(jet->m()); //DOES THIS NEED TO BE CONVERTED?
+    m_jetCount->push_back (counter_jet); //To control constituent-jet matching.
 
     //Truth information.
     if (isMC) {
-      partonID->push_back(jet->getAttribute<int>("PartonTruthLabelID"));
+      int partonID_value = jet->getAttribute<int>("PartonTruthLabelID");
+      if (partonID_value > 0 && partonID_value <= 6) {
+          isTruthQuark->push_back(1);
+      }
+      if (partonID_value == 21) {
+          isTruthQuark->push_back(0);
+      }
+      if (partonID_value == -1) {
+          isTruthQuark->push_back(-1);
+      }
+      partonID->push_back(partonID_value);
     }
 
     //Calculate jet charge fraction.
@@ -327,7 +346,7 @@ StatusCode MyxAODAnalysis :: execute ()
     m_jetNumTrkPt500->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex));
     m_jetNumTrkPt1000->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt1000").at(pvIndex));
 
-    m_jetSumTrkPt500->push_back((jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex)) * 0.001);
+    m_jetSumTrkPt500->push_back((jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex)));
     //m_jetSumTrkPt1000->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt1000").at(pvIndex));
 
     //No track width in this derivation? Try another?
@@ -336,13 +355,13 @@ StatusCode MyxAODAnalysis :: execute ()
     //Debug string for jet track constituent variables, run in debug or change to INFO
     //(can I just access the last pushback?).
     //TODO: FIX THE UNITS AND BE CONSISTENT.
-    ANA_MSG_INFO("Jet: " << counter_jet << " with pT: " << (jet->pt() * 0.001) 
+    ANA_MSG_INFO("Jet: " << counter_jet << " with pT: " << (jet->pt())
                          << " has nTrack(500): " 
                          << jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex)
                          << ", nTrack(1000): " 
                          << jet->getAttribute<std::vector<int>>("NumTrkPt1000").at(pvIndex)                         
                          << ", track sum Pt(500): "
-                         << (jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex) * 0.001));
+                         << (jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex)));
 
     /////////////////////////////////////////
     //
@@ -354,22 +373,22 @@ StatusCode MyxAODAnalysis :: execute ()
     const xAOD::JetConstituentVector cons = jet->getConstituents();
     for (auto cluster_itr : cons){
         //ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
-        partE->push_back(cluster_itr->e() * 0.001);
-    	partPt->push_back(cluster_itr->pt() * 0.001);
-        partPx->push_back(cluster_itr->px() * 0.001);
-        partPy->push_back(cluster_itr->py() * 0.001);
-        partPz->push_back(cluster_itr->pz() * 0.001);
+        partE->push_back(cluster_itr->e());
+    	partPt->push_back(cluster_itr->pt());
+        partPx->push_back(cluster_itr->px());
+        partPy->push_back(cluster_itr->py());
+        partPz->push_back(cluster_itr->pz());
     	partEta->push_back(cluster_itr->eta());
     	partPhi->push_back(cluster_itr->phi());
-        partMass->push_back(cluster_itr->m() * 0.001);
+        partMass->push_back(cluster_itr->m());
         partJetCount->push_back(counter_jet);
         partRunNumber->push_back(m_runNumber);
         partEventNumber->push_back(m_eventNumber);
 
-	//Compute delta R between consitutent and Jet
+        //Compute delta R between consitutent and Jet
         Double_t deta = cluster_itr->eta() - jet->eta ();
-  	Double_t dphi = TVector2::Phi_mpi_pi(cluster_itr->phi() - jet->phi());
-  	double_t dR   = TMath::Sqrt( deta*deta+dphi*dphi );
+        Double_t dphi = TVector2::Phi_mpi_pi(cluster_itr->phi() - jet->phi());
+        double_t dR   = TMath::Sqrt( deta*deta+dphi*dphi );
         //hist ("h_deltaR")->Fill (dR);
         partDeltaR->push_back(dR);
   	/*
@@ -381,6 +400,7 @@ StatusCode MyxAODAnalysis :: execute ()
 	*/
         counter_part ++;
     }
+    m_jetNumberConstituent->push_back (counter_part); // number of constituent
     counter_jet ++;
     //Better to use this method instead?
     //ANA_MSG_INFO("For jet at counter: " << counter_jet);
@@ -433,8 +453,10 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete m_jetTrackWidthPt500;
   delete m_jetTrackWidthPt1000;
   delete partonID;
+  delete isTruthQuark;
   delete m_jetEMFrac;
   delete m_jetHECFrac;
+  delete m_jetNumberConstituent;
 
   delete partE;
   delete partPt;
