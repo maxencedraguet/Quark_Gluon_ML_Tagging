@@ -6,7 +6,7 @@
     * Regarding submission to the grid, the issue is not yet resolved and Aaron is working on this (he received an example of steering macro for the grid that he thinks might work better since we still do not understand the issue).
     * GranularUprootTransformer (in DataLoaders): code to process the tree given by the granular gatherer into two things:
     * A pair of dataframes (for constituents and jets) stored as h5 + diagnostic plots (see below)
-    * A json file containing a dictionary of junipr jets 
+    * A json file containing a dictionary of junipr jets (a small example is displayed in the file <i>example_JUNIPR_data.json</i>)
 
 * The later is obtained by processing the constituent and jet dataframes with JuniprProcessing (in DataLoaders). Several stages are involved:
     * The first stage is to gather the constituent info (in a panda dataframe) into a per jet event.
