@@ -24,7 +24,7 @@ cross_section_sampler:                                        # A cross section 
 experiment_type:                    GranularUpRootTransformer
 
 save_model:                         True                      # Whether to save the model or not
-diagnostic:                         False                     # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py)
+diagnostic:                         True                      # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py, GranularUpRootTransformer, ...)
 
 NN_Model:
     lr:                             0.001
@@ -70,11 +70,12 @@ UpRootTransformer:
 
 GranularUpRootTransformer:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set4/    # where to store the result
-    save_tables:                    False                                    # Whether to store the intermediary tables of constituents and jets (format define below)
+    save_tables:                    True                                     # Whether to store the intermediary tables of constituents and jets (format define below)
     to_CSV:                         False                                    # Save to CSV
     to_HDF5:                        True                                     # Save to HDF5
-    JUNIPR_transform:               True                                     # Do the JUNIPR transform
+    JUNIPR_transform:               False                                    # Do the JUNIPR transform
     save_JUNIPR_transform:          True                                     # Save the result into a json file
+    clean_jets:                     False                                     # Bool to clean the jets
 
 Train_Test_Separator:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set3/HF/Separated/
