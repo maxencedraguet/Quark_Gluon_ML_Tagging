@@ -1,42 +1,42 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* Granular data gatherer: thanks to Aaron's tremendous help, the algorithm now runs and collects (almost) all the data required. The only small things missing are some variables that were present in past versions (mostly: jetTrackWidthPt500, jetTrackWidthPt1000,  jetSumTrkPt1000, and jetHECFrac - note that the width of the jet is now somewhat accessed by a different variable).
-    * In particular, the truth infomationis now accessible
-    * Regarding submission to the grid, the issue is not yet resolved and Aaron is working on this (he received an example of steering macro for the grid that he thinks might work better since we still do not understand the issue)
-* GranularUprootTransformer (in DataLoaders): code to process the tree given by the granular gatherer into two things
+* Granular data gatherer: thanks to Aaron's tremendous help, the algorithm now runs and collects (almost) all the data required. The only small things missing are some variables that were present in past versions (mostly: jetTrackWidthPt500, jetTrackWidthPt1000,  jetSumTrkPt1000, and jetHECFrac - note that the width of the jet is somewhat accessed by a different variable).
+    * In particular, the truth infomation is now accessible.
+    * Regarding submission to the grid, the issue is not yet resolved and Aaron is working on this (he received an example of steering macro for the grid that he thinks might work better since we still do not understand the issue).
+    * GranularUprootTransformer (in DataLoaders): code to process the tree given by the granular gatherer into two things:
     * A pair of dataframes (for constituents and jets) stored as h5 + diagnostic plots (see below)
     * A json file containing a dictionary of junipr jets 
 
-* The later is obtained by processing the constituent and jet dataframes with JuniprProcessing (in DataLoaders). Several stages are involved
-    * The first stage is to gather the constituent info (in a panda dataframe) into a per jet event
-    * This is then translated into a numpy sequence (one for each jet) that is processed using the PyJet library
-    * This library implements a (simplified) version of the FastJet algorithm for python
-    * The output is a clustering sequence (general enough to work with any clustering algorithm, anti-Kt for now)
+* The later is obtained by processing the constituent and jet dataframes with JuniprProcessing (in DataLoaders). Several stages are involved:
+    * The first stage is to gather the constituent info (in a panda dataframe) into a per jet event.
+    * This is then translated into a numpy sequence (one for each jet) that is processed using the PyJet library.
+    * This library implements a (simplified) version of the FastJet algorithm for python.
+    * The output is a clustering sequence (general enough to work with any clustering algorithm, anti-Kt for now).
     * This sequence is accessed to gather junipr like information about the event into a dictionnary. In particular:
-        * a list of constituent momenta in the system (energy, theta, phi, mass) is set up (coordinate system focus on the global jet direction)
+        * a list of constituent momenta in the system (energy, theta, phi, mass) is set up (coordinate system focus on the global jet direction) for all constituents and for mother/ daugthers.
         * a list of branching (a pseudo particle decays into two sub particles) is returned and each branching is parametrised as in junipr (z, theta, phi, delta) with:
-            * z fraction of energy of soft daugther (right now, the one of least energy ... is this right or should it be the one of least pT ... they take energy)
-            * theta: angle between mother and soft daughter
-            * phi: angle of the plane of the decay with respect to a fixed orientation (detector y axis) and the mother
-            * delta: angle between mother and hard daughter
-    * The result has been checked for consistency and seems to match the format of junipr data
+            * z: fraction of energy of soft daugther (right now, the one of least energy ... is this right or should it be the one of least pT ... they take energy),
+            * theta: angle between mother and soft daughter,
+            * phi: angle of the plane of the decay with respect to a fixed orientation (detector y axis) and the mother,
+            * delta: angle between mother and hard daughter.
+    * The result has been checked for consistency and seems to match the format of junipr data.
     
 * Some information (called diagnostic) can be produced by the GranularUprootTransformer. It indicated a few interesting elements.
-    * A spurious behaviour was uncovered: there is a peak around 3 constituents per jet in the non-cut data. Aaron indicated this looks like muon contamination (cutting jets with less than 4 constituents is in fact a good cut against them). To safeguard against bad cases, three cuts were added removing:
+    * A spurious behaviour was uncovered: there is a peak around 3 constituents per jet in the (non-cut) data. Aaron indicated this looks like muon contamination (cutting jets with less than 4 constituents is in fact a good cut against them). To safeguard against bad cases, three cuts were added removing:
         *  jets with pT < 20 GeV. 
         *  jets with a truth information that is neither quark (1) nor gluon (0)
         * jets with less than 4 constituents
-    * Global effect of the cut
+    * Global effect of the cut:
         * Jet tables goes from 482,797 to 147,388 entries  (reduction factor: 30.5% )
         * Constituents tables goes from 6,001,431 to 2,361,307 entries (reduction factor: 39.3%)
-    * Left: the number of constituents per jet.. Right: the number of constituents per jet WITH cuts.
+    * Left: the number of constituents per jet. Right: the number of constituents per jet WITH cuts.
     <p float="center">
     <img src="Readme_Result/Diag_no_cut/CounterElem.png" width="350" />
     <img src="Readme_Result/Diag_cut/CounterElem.png" width="350" />
     </p>
     
-    * Left: jet ID. Right:  jet ID WITH cuts (all next have the cuts).
+    * Left: jet ID. Right:  jet ID WITH cuts. All plots following have the cuts.
     <p float="center">
     <img src="Readme_Result/Diag_no_cut/isTruthQuark.png" width="350" />
     <img src="Readme_Result/Diag_cut/isTruthQuark.png" width="350" />
@@ -48,13 +48,13 @@
     <img src="Readme_Result/Diag_cut/jetEMFrac.png" width="350" />
     </p>
    
-   * Left: jet phi . Right: constituents phi. Interesting case for the constituents: could it be due to the structure of the detector (cylinder detector, most cell could be aligned along given radius and hence focus at given values of phi)? The asymmetry of the right plot seems to be explained by the left one: in this sample, more jets had a positive phi. 
+   * Left: jet phi . Right: constituents phi. Interesting case for the constituents: could it be due to the structure of the detector (cylinder detector, most cells could be aligned along given radius and hence focus at given values of phi)? The asymmetry of the right plot seems to be explained by the limited statistics. 
    <p float="center">
    <img src="Readme_Result/Diag_cut/jetPhi.png" width="350" />
    <img src="Readme_Result/Diag_cut/constituentPhi.png" width="350" />
    </p>
    
-   * Energy of the jet (left) and constituents (right), both in logscale
+   * Energy of the jet (left) and energy constituents (right), both in logscale
    <p float="center">
    <img src="Readme_Result/Diag_cut/jetE_log.png" width="350" />
    <img src="Readme_Result/Diag_cut/constituentE_log.png" width="350" />
