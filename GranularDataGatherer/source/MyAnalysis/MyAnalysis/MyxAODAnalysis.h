@@ -84,7 +84,8 @@ private:
   std::vector<float> *partMass = nullptr;
   std::vector<float> *partDeltaR = nullptr;
   std::vector<int> *partJetCount = nullptr;
-
+  std::vector<int> *partRunNumber = nullptr;
+  std::vector<int> *partEventNumber = nullptr;
   //bool c_isMC;
 };
 

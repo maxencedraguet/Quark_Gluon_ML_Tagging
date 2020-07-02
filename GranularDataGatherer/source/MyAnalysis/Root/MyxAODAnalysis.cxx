@@ -120,7 +120,10 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("constituentDeltaRtoJet", &partDeltaR);
   partJetCount = new std::vector<int>();
   mytree->Branch ("constituentJet", &partJetCount);
-
+  partRunNumber  = new std::vector<int>();
+  mytree->Branch ("constituentRunNumber", &partRunNumber);
+  partEventNumber = new std::vector<int>();
+  mytree->Branch ("constituentEventNumber", &partEventNumber);
   return StatusCode::SUCCESS;
 }
 
@@ -359,7 +362,7 @@ StatusCode MyxAODAnalysis :: execute ()
     	partEta->push_back(cluster_itr->eta());
     	partPhi->push_back(cluster_itr->phi());
         partMass->push_back(cluster_itr->m() * 0.001);
-	partJetCount->push_back(counter_jet);	
+        partJetCount->push_back(counter_jet);
         partRunNumber->push_back(m_runNumber);
         partEventNumber->push_back(m_eventNumber);
 
@@ -443,4 +446,6 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete partMass;
   delete partJetCount;
   delete partDeltaR;
+  delete partRunNumber;
+  delete partEventNumber;
 }
