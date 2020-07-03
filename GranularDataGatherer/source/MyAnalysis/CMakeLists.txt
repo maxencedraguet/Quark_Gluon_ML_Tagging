@@ -6,7 +6,8 @@ atlas_add_library (MyAnalysisLib
   MyAnalysis/*.h Root/*.cxx
   PUBLIC_HEADERS MyAnalysis
   LINK_LIBRARIES AnaAlgorithmLib 
-                 xAODEventInfo 
+                 xAODEventInfo
+                 EventLoopGrid 
                  AsgAnalysisInterfaces 
                  xAODJet
                  SUSYToolsLib
