@@ -28,8 +28,8 @@ parser.add_option( '-n', '--nEvents', dest = 'nevents',
 # Set Data type (add this as an automatic function or argument)
 # [choose from Data=0, FullSim=1 or AtlfastII=2]
 data_type_dict = {'data'      : 0,
-    'FullSim'   : 1,
-        'AtlfastII' : 2}
+                  'FullSim'   : 1,
+                  'AtlfastII' : 2}
 dataType = data_type_dict[options.data_type]
 
 # Set up the sample handler object. See comments from the C++ macro
@@ -43,12 +43,12 @@ if options.driver == 'direct':
     driver = ROOT.EL.DirectDriver()
     inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128"
         #inputFilePath = "/data/atlas/atlasdata3/oneill/DAOD_JETM6/data16_13TeV.periodF.physics_Main.PhysCont.DAOD_JETM6.grp16_v01_p4129"
-        ROOT.SH.ScanDir().filePattern( '*' ).scan( sh, inputFilePath )
+    ROOT.SH.ScanDir().filePattern( '*' ).scan( sh, inputFilePath )
 
 elif options.driver == 'grid':
     driver = ROOT.EL.PrunDriver()
     ROOT.SH.scanRucio (sh, "mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128")
-    driver.options().setString("nc_outputSampleName", "user.aoneill.testLatest6.%in:name[2]%.%in:name[6]%")
+    driver.options().setString("nc_outputSampleName", "user.mdraguet.testLatest6.%in:name[2]%.%in:name[6]%")
 
 sh.printContent()
 
