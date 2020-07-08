@@ -33,6 +33,20 @@ common_cleaning_vars  = [
                          'PVnumTrk',#            : < 2             
                         ]
 """
+vars_convert_MeV_to_GeV_constituent = [
+                                       'constituentE',
+                                       'constituentPt',
+                                       'constituentPx',
+                                       'constituentPy',
+                                       'constituentPz',
+                                       'constituentMass'
+                                      ]
+vars_convert_MeV_to_GeV_jet = [
+                               'jetPt',
+                               'jetMass',
+                               'jetE'
+                              ]
+
 qg_constituent_vars   = [
                          'constituentE',
                          'constituentPt',
@@ -54,7 +68,20 @@ qg_jet_vars           = [
                          'jetEta', 
                          'jetPhi', 
                          'jetMass',
-                         'jetE'
+                         'jetE',
+                         'jetWidth',
+                         'jetEMFrac',
+                         #'jetHECFrac',      # still not up
+                         'jetChFrac',        # up
+                         'jetNumTrkPt500',
+                         'jetNumTrkPt1000',
+                         #'jetTrackWidthPt500',     # not in derivation
+                         'jetTrackWidthPt1000',     # but this one is for some reason
+                         'jetSumTrkPt500',
+                         #'jetSumTrkPt1000', # weirdly not up yet
+                         'partonID',         # this is supposedly the truth info of the jet ID. Should get a way of seeing if it's quark or gluon
+                         'isTruthQuark',      # same as above but regroups quark value to 1 (pID between 1 and 6), gluon to 0 (pID 21) and other to -1
+                         'jetNumberConstituent'
                         ]
 """,
     'jetEMFrac',
@@ -66,11 +93,25 @@ qg_jet_vars           = [
     'jetTrackWidthPt1000',
     'jetSumTrkPt500',
     'jetSumTrkPt1000',
-    'partonIDs',
+    'partonID',
     'BDTScore',
     'isTruthQuark',
     'isBDTQuark',
     'isnTrkQuark'"""
+
+"""
+    # What follows is a list of jet quality cuts that should properly be used at the algo level
+    'isBadJet',
+    'isBaselineJet',
+    'isSignalJet',
+    'isBJet',
+    'passJvt',
+    'passfJvt',
+    'JvtScore',
+    'fJvtScore',
+    'btag_weight'
+    
+    """
 
 plot_xlabels          = {
                          'jetPt'                 : '$p_{\mathrm{T}}$ [GeV]',
@@ -87,11 +128,13 @@ plot_xlabels          = {
                          'jetTrackWidthPt1000'   : '$w_{\mathrm{track}}^{1000}$',
                          'jetSumTrkPt500'        : '$\sum_{i \in \mathrm{tracks}} p_{\mathrm{T ,track}}^{500, i}$',
                          'jetSumTrkPt1000'       : '$\sum_{i \in \mathrm{tracks}} p_{\mathrm{T ,track}}^{500, i}$', 
-                         'partonIDs'             : 'Parton ID', 
+                         'partonID'             : 'Parton ID',
                          'BDTScore'              : 'BDT Score',
                          'isTruthQuark'          : 'Truth Quark', 
                          'isBDTQuark'            : 'BDT Quark', 
                          'isnTrkQuark'           : '$n_{\mathrm{track}}$ Quark',
+                         'jetWidth'              : 'Width of the jet',
+                         'jetNumberConstituent'  : 'Number of constituents per jet (algorithm)',
                         ##### Constituents
                         'constituentPt'          : '$p_{\mathrm{T}}$ [GeV]',
                         'constituentPx'          : '$p_{x}$ [GeV]',
@@ -106,6 +149,8 @@ plot_xlabels          = {
                         'differenceEnergy'       : 'Jet Energy - $\Sigma$ constituent Energy [GeV]',
                         'differencePx'           : 'Jet $p_x$ - $\Sigma$ constituent $p_x$ [GeV]',
                         'differencePy'           : 'Jet $p_y$ - $\Sigma$ constituent $p_y$ [GeV]',
+                        'differencePx_computed'  : 'Jet $p_x$ - $\Sigma$ constituent $p_x$ (from angles) [GeV]',
+                        'differencePy_computed'  : 'Jet $p_y$ - $\Sigma$ constituent $p_y$ (from angles) [GeV]',
                         'CounterElem'            : 'Number of constituents per jet'
                         
                         
@@ -126,26 +171,30 @@ plot_xranges          = {
                          'jetTrackWidthPt1000'   : [0.0, 0.6],
                          'jetSumTrkPt500'        : [0.0, 4000],
                          'jetSumTrkPt1000'       : [0.0, 4000], 
-                         'partonIDs'             : [0, 21], 
+                         'partonID'             : [0, 21],
                          'BDTScore'              : [-1.0, 1.0],
-                         'isTruthQuark'          : [0, 1], 
+                         'isTruthQuark'          : [-1, 1],
                          'isBDTQuark'            : [0, 1],
                          'isnTrkQuark'           : [0, 1],
+                         'jetWidth'              : [0, 1],
+                         'jetNumberConstituent'  : [0, 50],
                              ####
-                         'constituentPt'         : [0.0, 300.0],
-                         'constituentPx'         : [0.0, 300.0],
-                         'constituentPy'         : [0.0, 300.0],
-                         'constituentPz'         : [0.0, 300.0],
+                         'constituentPt'         : [-10.0, 400.0],
+                         'constituentPx'         : [-400.0, 400.0],
+                         'constituentPy'         : [-400.0, 400.0],
+                         'constituentPz'         : [-400.0, 400.0],
                          'constituentEta'        : [-3.0, 3.0],
                          'constituentPhi'        : [-3.5, 3.5],
-                         'constituentMass'       : [0.0, 20.0],
-                         'constituentE'          : [0.0, 300.0],
+                         'constituentMass'       : [0.0, 1.0],
+                         'constituentE'          : [-100.0, 700.0],
                          'constituentDeltaRtoJet': [0.0, 0.7],
                          ##### Additional
-                         'differenceEnergy'       : [-50.0, 2000.0],
-                         'differencePx'           : [-200.0, 300.0],
-                         'differencePy'           : [-200.0, 300.0],
-                         'CounterElem'            : [0, 100]
+                         'differenceEnergy'       : [-100.0, 2000.0],
+                         'differencePx'           : [-300.0, 300.0],
+                         'differencePy'           : [-300.0, 300.0],
+                         'differencePx_computed'  : [-300.0, 300.0],
+                         'differencePy_computed'  : [-300.0, 300.0],
+                         'CounterElem'            : [0, 50]
                              
                         }
 
@@ -162,33 +211,38 @@ plot_xbins          = {
                          'jetNumTrkPt1000'       : 90, 
                          'jetTrackWidthPt500'    : 12, 
                          'jetTrackWidthPt1000'   : 12,
-                         'jetSumTrkPt500'        : 1000,
-                         'jetSumTrkPt1000'       : 1000, 
-                         'partonIDs'             : 21, 
+                         'jetSumTrkPt500'        : 100,
+                         'jetSumTrkPt1000'       : 100,
+                         'partonID'             : 21,
                          'BDTScore'              : 20,
-                         'isTruthQuark'          : 2, 
+                         'isTruthQuark'          : 3,
                          'isBDTQuark'            : 2, 
                          'isnTrkQuark'           : 2,
+                         'jetWidth'              : 200,
+                         'jetNumberConstituent'  : 51,
                              ###
-                         'constituentPt'         : 100,
-                         'constituentPx'         : 100,
-                         'constituentPy'         : 100,
-                         'constituentPz'         : 100,
+                         'constituentPt'         : 150,
+                         'constituentPx'         : 150,
+                         'constituentPy'         : 150,
+                         'constituentPz'         : 150,
                          'constituentEta'        : 100,
                          'constituentPhi'        : 1000,
                          'constituentMass'       : 100,
-                         'constituentE'          : 100,
+                         'constituentE'          : 120,
                          'constituentDeltaRtoJet': 200,
                          ##### Additional
                          'differenceEnergy'       : 100,
                          'differencePx'           : 100,
                          'differencePy'           : 100,
-                         'CounterElem'            : 101
+                         'differencePx_computed'  : 100,
+                         'differencePy_computed'  : 100,
+                         'CounterElem'            : 51
                         
                      }
 
-skip_hist = ['constituentJet', 'constituentRunNumber', 'constituentEventNumber']
+skip_hist = ['constituentJet', 'constituentRunNumber', 'constituentEventNumber', 'jetTrackWidthPt1000']
 
-log_hist = ['jetE', 'constituentE', 'jetPt', 'constituentPt', 'constituentPx', 'constituentPy', 'constituentPz', 'differenceEnergy', 'differencePx', 'differencePy']
+log_hist = ['jetNumberConstituent', 'jetE', 'constituentE', 'jetPt', 'constituentPt', 'constituentPx', 'constituentPy', 'constituentPz', 'differenceEnergy', 'differencePx', 'differencePy', 'differencePx_computed', 'differencePy_computed']
+
 
 
