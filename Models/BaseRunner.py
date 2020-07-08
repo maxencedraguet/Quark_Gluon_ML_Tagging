@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from DataLoaders import DataLoader_Set1, DataLoader_Set2
+from DataLoaders import DataLoader_Set1, DataLoader_Set2, DataLoader_Set4
 
 class _BaseRunner(ABC):
     def __init__(self, config: Dict) -> None:

@@ -103,7 +103,7 @@ class MultimodalRunner(_BaseRunner):
         with open(model_config, 'r') as yaml_file:
             loaded_parameters = yaml.load(yaml_file, yaml.SafeLoader)
         additional_parameters = MainParameters(loaded_parameters)
-        network = NeuralNetwork(config=additional_parameters)
+        network = NeuralNetwork(source = "NN_Model", config=additional_parameters)
         network.load_model(path)
         network.eval()
         return network

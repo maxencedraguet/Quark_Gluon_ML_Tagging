@@ -63,7 +63,7 @@ class NNRunner(_BaseRunner):
 
     def setup_NN(self, config: Dict):
         #if self.network_type = "neural_network":
-        self.network = NeuralNetwork(config=config)
+        self.network = NeuralNetwork(source = "NN_Model", config=config)
         self.last_non_lin = self.network.get_last_non_linearity()
         self.setup_loss(config=config)
 

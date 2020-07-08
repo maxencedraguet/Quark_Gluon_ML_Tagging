@@ -1,8 +1,8 @@
 #############################################################################
 #
-# NNRunner.py
+# NNetwork.py
 #
-# A neural network runner using PyTorch
+# A neural network using PyTorch
 #
 # Author -- Maxence Draguet (1/06/2020)
 #
@@ -21,9 +21,14 @@ from .BaseNetwork import _BaseNetwork
 
 class NeuralNetwork(_BaseNetwork):
     
-    def __init__(self, config: Dict):
+    def __init__(self, source: String, config: Dict):
+        self.source = source
         self.extract_parameters(config)
         _BaseNetwork.__init__(self, config=config)
+        
+        # Methods inherited from mother class:
+        self.nonlinearity = self.identify_nonlinfunc(self.nonlinearity_name)
+        self.end_nonlinearity = self.identify_nonlinfunc(self.end_nonlinearity_name)
         self.construct_layers()
 
     
@@ -32,10 +37,36 @@ class NeuralNetwork(_BaseNetwork):
         Method to extract relevant parameters from config and make them attributes of this class
         dimensions should be a list of successive size.
         """
-        self.dimensions = config.get(["NN_Model", "NeuralNet", "input_dimensions"])
-        self.initialisation = config.get(["NN_Model", "initialisation"])
-        self.proba_dropout_first_layer = config.get(["NN_Model", "dropout_proba"])
-
+        if self.source = "NN_Model":
+            self.dimensions = config.get(["NN_Model", "NeuralNet", "input_dimensions"])
+            self.initialisation = config.get(["NN_Model", "initialisation"])
+            self.proba_dropout_first_layer = config.get(["NN_Model", "dropout_proba"])
+        
+            self.nonlinearity_name = config.get(["NN_Model", "NeuralNet", "nonlinearity"])
+            self.end_nonlinearity_name = config.get(["NN_Model", "NeuralNet", "end_nonlinearity"])
+        
+        elif self.source == "RecurrentInit":
+            self.dimensions = config.get(["Junipr_Model", "Structure", "Recurrent", "Init", "input_dimensions"])
+            self.initialisation = config.get(["Junipr_Model", "Structure", "Recurrent", "Init", "initialisation"])
+            self.proba_dropout_first_layer = config.get(["Junipr_Model", "Structure", "Recurrent", "Init",])
+            
+            self.nonlinearity_name = config.get(["Junipr_Model", "Structure", "Recurrent", "Init",])
+            self.end_nonlinearity_name = config.get(["Junipr_Model", "Structure", "Recurrent", "Init", "end_nonlinearity"])
+        elif self.source == "JuniprEnd":
+            pass
+        elif self.source == "JuniprMother":
+            pass
+        elif self.source == "JuniprBranchZ":
+            pass
+        elif self.source == "JuniprBranchT":
+            pass
+        elif self.source == "JuniprBranchD":
+            pass
+        elif self.source == "JuniprBranchP":
+            pass
+        else:
+            raise ValueError("Invalid source name")
+                
     def get_last_non_linearity(self):
         return self.end_nonlinearity_name
 
