@@ -1,16 +1,17 @@
 experiment_name:                    test                      # Experiment name.
 use_gpu:                            False                     # Use a GPU if available.
 seed:                               1                         # Random seed to ensure reproducibility.
-dataset:                            Set2                      # Data to use (Set1, Set2, ...)
+dataset:                            Set4                      # Data to use (Set1, Set2, Set3, Set4...)
 
-# Path to the dataset directory.
+# Path to the dataset directory. SHOULD MATCH THE DATASET INDICATED JUST ABOVE
 #   For Set 1: a directory with the CSV for test (all ttbar)
-#   For Set 2: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set2/HF/
+#   For Set 2/3: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set[2 or 3]/HF/
+#   For Junipr dataset (Set 4): ../example_JUNIPR_data.json
 #   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [2 or 3] /loader_list.txt
 #   For GranularUpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [4 or 5] /loader_list.txt
 #   For Train_Test_Separator: the complete path to a h5 file to split into train-validation-test: /data/atlas/atlasdata3/mdraguet/Set2/HF/mc16aprocessed.h5
-absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set3/HF/
-fraction_data:                      0.01                       # Fraction of the data to load.
+absolute_data_path:                 ../example_JUNIPR_data.json
+fraction_data:                      1                         # Fraction of the data to load.
 test_size:                          0.2                       # Fraction of data to use for test
 equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
 
@@ -20,11 +21,12 @@ cross_section_sampler:                                        # A cross section 
                                                               #         The final number may differ: rare processes are at least sampled once (increase number)
                                                               #         and if too many samples are asked, the demand is trimmed to what is available.
 
-# Model to implement (BDT, NN ...) or method to run (UpRootTransformer, GranularUpRootTransformer, Train_Test_Separator ...)
-experiment_type:                    GranularUpRootTransformer
+# Model to implement (BDT, NN, Junipr ...) or method to run (UpRootTransformer, GranularUpRootTransformer, Train_Test_Separator ...)
+# Warning, this is case sensitive
+experiment_type:                    Junipr
 
-save_model:                         True                      # Whether to save the model or not
-diagnostic:                         True                      # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py, GranularUpRootTransformer, ...)
+save_model:                         False                     # Whether to save the model or not
+diagnostic:                         False                     # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py, GranularUpRootTransformer, ...)
 
 NN_Model:
     lr:                             0.001
@@ -51,6 +53,24 @@ BDT_model:                                                    # For AdaBoostClas
     lr:                             0.15                      # Learning rate
     grid_search:                    False                     # Whether to perform grid search
 
+Junipr_Model:
+    Junipr_Dataset:
+        padding_size:               30                        # Padded target size for all tensors to be batched to the recurrence (the real size is stored in n_branching)
+        padding_value:              0.0                       # The padding value.
+        feature_scaling_parameters: [600.0, 0.1, 1.571, 0.01]     # [E_jet, E_sub, R_jet, R_sub] used for scaling values. 1.571 value for R_jet is pi/2
+        granularity:                10                        # To bin the values of branches
+    lr:                             0.001
+    lr_scheduler:                   True
+    epoch:                          2
+    batch_size:                     2
+    loss_function:                  BCE_log                   # Loss function to use: BCE_log (binary-cross entropy with logit), BCE (same without the sigmoid)
+    initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
+    test_frequency:                 100                       # Frequency of test error estimation during traing (for plotting purpose)
+    optimiser:
+        type:                       adam
+        params:                     [0.9, 0.999, 0.00000001]  # Parameters of the optimiser: should be general enough but could be optimised.
+        weight_decay:               0.0000001                   # Weight decay for L2 regularisation
+
 Multi_model:
     # The list of models to assess in format (model_type, path_to_model, path_to_model_config.yaml, description_string)
     # Model typ is NN or BDT; path_to_model_config.yaml is only necessary for NN; description_string is with "_" separator between words
@@ -70,12 +90,12 @@ UpRootTransformer:
 
 GranularUpRootTransformer:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set4/    # where to store the result
-    save_tables:                    True                                     # Whether to store the intermediary tables of constituents and jets (format define below)
+    save_tables:                    False                                    # Whether to store the intermediary tables of constituents and jets (format define below)
     to_CSV:                         False                                    # Save to CSV
     to_HDF5:                        True                                     # Save to HDF5
-    JUNIPR_transform:               False                                    # Do the JUNIPR transform
+    JUNIPR_transform:               True                                     # Do the JUNIPR transform
     save_JUNIPR_transform:          True                                     # Save the result into a json file
-    clean_jets:                     False                                     # Bool to clean the jets
+    clean_jets:                     True                                     # Bool to clean the jets
 
 Train_Test_Separator:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set3/HF/Separated/
