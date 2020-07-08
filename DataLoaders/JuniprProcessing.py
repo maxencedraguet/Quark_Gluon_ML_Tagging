@@ -18,6 +18,7 @@ pd.set_option('display.max_rows', 5)
 pd.set_option('display.max_colwidth', -1)
 from pyjet import cluster
 from pyjet.utils import ptepm2ep
+from tqdm.auto import tqdm
 import json
 
 def get_4mom(jet):
@@ -41,6 +42,8 @@ def get_4mom_EM_rel(jet, rel):
     rel_vec = [rel.px, rel.py, rel.pz]
     energy = jet.e
     mass   = jet.mass
+    if mass < 0: # in some cases, one of the daughter mass was negative
+        mass = 0
     theta  = get_angle_between_momenta(jet_vec, rel_vec)
     phi    = get_plane_of_momenta(jet_vec, rel_vec)
     return [float("{:.8f}".format(energy)), float("{:.8f}".format(theta)), float("{:.8f}".format(phi)), float("{:.8f}".format(mass))]
@@ -145,7 +148,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
     - CS_ID_intermediate_states:
     a list of list. In each sublist, lists the indices of particles at the moment considered
     There is a sublist for each state of the clustering (for 1 to x particles, there should be x lists so there are as many sublists as the multiplicty)
-    - mother_id_energy_order: indicates in the previous list who decays (size = nbranching: the last one is skipped) this seems useless
+    - mother_id_energy_order: from the intermediate state particles ranked by energy, indicate which one is the mother (also among final state particle)
     - CS_ID_mothers: the ID's of the mother that decay, from first to decay to the last,
     - CS_ID_daugthers: list of list. Sublists are pairs of daughters produced by the decay of one of the mother. Some of these might be mothers later
     - branching: this a a peculiar list of lists. The subist collect 4 numbers representing the branching.
@@ -155,23 +158,21 @@ def perform_antiKT(jet_pdf, constituent_pdf):
     """
     DTYPE_EP = np.dtype('f8,f8,f8,f8')
     cpdf = constituent_pdf.copy(deep = True) # .iloc[:100,:]
-    j_pdf = jet_pdf.copy(deep = True)
-    j_pdf = j_pdf[['entry', 'subentry', 'isTruthQuark']]
     
     cpdf['4-momentum'] = list(zip(cpdf['constituentE'], cpdf['constituentPx'], cpdf['constituentPy'], cpdf['constituentPz']))
-    cpdf = cpdf[['entry', 'constituentJet', '4-momentum']]
-    cpdf = cpdf.groupby(['entry', 'constituentJet'])['4-momentum'].apply(list).reset_index(name='4-mom_list') ## There is a faster way of doing this with numpy
+    cpdf = cpdf[['entry', 'constituentJet', '4-momentum', 'isTruthQuark']]
+    cpdf = cpdf.groupby(['entry', 'constituentJet', 'isTruthQuark'])['4-momentum'].apply(list).reset_index(name='4-mom_list') ## There is a faster way of doing this with numpy
     
-    cpdf = pd.merge(cpdf, j_pdf, how='left', left_on=['entry', 'constituentJet'], right_on=['entry', 'subentry'])
+    #cpdf = pd.merge(cpdf, j_pdf, how='left', left_on=['entry', 'constituentJet'], right_on=['entry', 'subentry'])
     # the dataset is now trimmed: only got the index and the list of 4-momenta constituents. The next step would be to cluster these.
     
     # One way to cluster is to use the python implementation of fastjest : pyjet.
-    column_data = cpdf['4-mom_list'].to_numpy() #only two for now [:2]
-    label_data  = cpdf['isTruthQuark'].to_numpy() #only two for now [:2]
+    column_data = cpdf['4-mom_list'][:5].to_numpy() #only two for now [:2]
+    label_data  = cpdf['isTruthQuark'][:5].to_numpy() #only two for now [:2]
     
     collected_data = dict()
     junipr_ready_datapoint = list()
-    for filou, elem in enumerate(column_data):
+    for filou, elem in enumerate(tqdm(column_data)):
         #print("\n JET {}\n".format(filou))
         # Initiate the information required for a jet:
         label = label_data[filou]
@@ -186,9 +187,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         CS_ID_daugthers = list()
         temp_branching_pjet = list()
         branching = list()
-        """
-        mother_id_energy_order =
-        """
+        mother_id_energy_order = list()
         
         # Some dictionnary to help with processing
         dic_of_particles_id_mom = dict()
@@ -210,7 +209,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
             
         jet = jets[0] #jet is the first and sole element of this list
         #print("The inclusive jet is ",jet)
-        seed_momentum = get_4mom(jet)
+        seed_momentum = get_4mom_EM_rel(jet, jet)
         #print("Jet info global = ", get_4mom_EM_rel(jet, jet))
             
         # Let's recuperate the final states particles: those we fed.
@@ -315,10 +314,15 @@ def perform_antiKT(jet_pdf, constituent_pdf):
             print("{}, {}".format(cou, entry))
         """
         # Convert some of the momenta list into indices lists
+        
+        # Note that CS_ID_intermediate_states_ind is ordered by energy (easier for mother_id_energy_order)
         CS_ID_intermediate_states_ind = list()
         for elem in CS_ID_intermediate_states:
+            # order the list by energy (the 0 component of each subelement in elem
+            elem_sorted = sorted(elem, key=lambda x: x[0], reverse = True)
             new_format = list()
-            for subelem in elem:
+            for subelem in elem_sorted:
+                # subelem is a 4-momenta that is here converted to an indice
                 new_format.append(dic_of_particles_mom_id[subelem])
             CS_ID_intermediate_states_ind.append(new_format)
 
@@ -329,6 +333,16 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         for elem in daughter_momenta:
             CS_ID_daugthers.append([dic_of_particles_mom_id[tuple(elem[0])], dic_of_particles_mom_id[tuple(elem[1])]  ])
 
+        # With the info just gathered, write list of mother_id_energy_order
+        mother_id_energy_order.append(0)
+        for counter, present_mother in enumerate(CS_ID_mothers):
+            # present_mother is the one decaying at the row considered.
+            if counter == 0:
+                # a first there can only be one mother so it's already in the list
+                continue
+            # CS_ID_intermediate_states_ind is ordered by energy: the mother index in this list is her ranking
+            mother_id = CS_ID_intermediate_states_ind[counter].index(present_mother)
+            mother_id_energy_order.append(mother_id)
         """
         print("\nChecking jet state with indices\n")
         for cou, entry in enumerate(CS_ID_intermediate_states_ind):
@@ -358,12 +372,13 @@ def perform_antiKT(jet_pdf, constituent_pdf):
 
         # Now make a dictionnary with these entry and add it to the junipr_ready_datapoint list
         datapoint = dict()
-        datapoint["label"]  = label
+        datapoint["label"]  = int(label)
         datapoint["multiplicity"]  = multiplicity
         datapoint["n_branchings"]  = n_branchings
         datapoint["seed_momentum"] = seed_momentum
         datapoint["CSJets"]        = CSJets
         datapoint["CS_ID_intermediate_states_ind"] = CS_ID_intermediate_states_ind
+        datapoint["mother_id_energy_order"] = mother_id_energy_order
         datapoint["CS_ID_mothers"]   = CS_ID_mothers
         datapoint["CS_ID_daugthers"] = CS_ID_daugthers
         datapoint["branching"] = branching
