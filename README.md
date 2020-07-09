@@ -1,6 +1,14 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
+
+* Modified the cut: no truth info. Left truth of jet, right energy constituents
+
+<p float="center">
+<img src="Readme_Result/isTruthQuark.png" width="350" />
+<img src="Readme_Result/constituentE_log.png" width="350" />
+</p>
+
 * I focused solely on setting up the dataloading for a Junipr-like model implemented in PyTorch. Several difficulties are faced:
 
     * The implementation differs significantly from that of the authors that adopted TensorFlow.Keras (their implementation is available on [this github page](https://github.com/andersjohanandreassen/JUNIPR)). The interest of "re-inventing" this wheel is that PyTorch allows for greater control in the training loop, is more flexible for implementation on GPU's and arguably faster. A significant advantage is that seeding (removing "randomness") is total in PyTorch while Keras could be criticised for leaving randomness in the RNN modules. Finally, a major interest in re-writing the whole structure is that it requires a deep understanding of every element included. 
@@ -19,7 +27,7 @@
 * To clarify, the following schema characterises the locally implemented Junipr structure:
 
 <p float="center">
-<img src="Readme_Result//JuniprStructure.png" width="800" />
+<img src="Readme_Result/JuniprStructure.png" width="800" />
 </p>
 
 * An important weakness that will require great care when analysing the network has been uncovered. It relates to the use of the anti-kT algorithm (over Cambridge-Aachen method or other). Indeed, this jet clustering method does not approximate the natural collinear structure of QCD. The hidden state of the recurrent network has to retain far more information in the case of anti-kT than, for example, C/A. To understand this point, some analysis of the anti-kT algorithm is required. In its process, it recombines to the <b>highest energy </b> final state particle with softer radiations (other final and intermediary (after the first step) states particles). This means that the mother in the anti-kT algorithm is <b>always</b> the most energetic particle at a given step. This has a profound implication on the JUNIPR structure. A whole branch of the model is tasked with predicting the index of the next mother in an energy-based ordered list of particles present at a given step. With anti-kT, this is trivially the first item of such a list for all steps (since the mother is always the most energetic). Such a network would learn an utterly useless mapping, setting the mother prediction to output the first index being right in all instances. The authors have tried this method and still obtained some good results in the task of discrimination (less so when considering generating new jets).The following two jet trees come from the JUNIPR paper and present, on the left side, the output for an A/C algorithm and, on the right side, that for the anti-kT. 
