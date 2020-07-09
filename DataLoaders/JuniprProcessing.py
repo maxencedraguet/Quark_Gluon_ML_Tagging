@@ -43,6 +43,7 @@ def get_4mom_EM_rel(jet, rel):
     energy = jet.e
     mass   = jet.mass
     if mass < 0: # in some cases, one of the daughter mass was negative
+        #print("Case of negative mass: ", mass)
         mass = 0
     theta  = get_angle_between_momenta(jet_vec, rel_vec)
     phi    = get_plane_of_momenta(jet_vec, rel_vec)
@@ -131,9 +132,9 @@ def get_plane_of_momenta(mom1_vec, mom2_vec):
     return phi_x
 
 
-def perform_antiKT(jet_pdf, constituent_pdf):
+def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_pdf):
     """
-    This routines applies the anti-kT algorithm to the constituents of the jet.
+    This routines applies the specified cluster_algorithm to the constituents of the jet (with the specified cluster_radius).
     
     The output is a dictonnary matching the format of JUNIPR that can be directly saved to JSON.
     
@@ -155,7 +156,19 @@ def perform_antiKT(jet_pdf, constituent_pdf):
     
     - mother_momenta: list of mother momenta (each 4 momenta presented as a list).
     - daugther_momenta: mist of daugther momentas. Pairs of daughters are in the sublists, with each momenta of daugther being a list.
+    
+    Note: a confusing element in the PyJet algorithm.
+    They call "mother" the particles that are clustered, not the clustered particle. This effectively inverts the role of mother-daughter compared to that
+    discussed in a branching. Where one typically says that ONE mother decays to TWO daughters, PyJet says that TWO mothers combined in ONE daughter. The naming
+    defined here reflects the typical version, only the PyJet function "parents" and "child" adopt the PyJet way (parents = daughters and child = mother).
     """
+    if cluster_algorithm == 'cambridge':
+        algo_p_value = 0
+    elif cluster_algorithm == 'antikt':
+         algo_p_value = -1
+    else:
+        raise ValueError("Cluster algorithm {} not recognised". format(cluster_algorithm))
+
     DTYPE_EP = np.dtype('f8,f8,f8,f8')
     cpdf = constituent_pdf.copy(deep = True) # .iloc[:100,:]
     
@@ -172,7 +185,8 @@ def perform_antiKT(jet_pdf, constituent_pdf):
     
     collected_data = dict()
     junipr_ready_datapoint = list()
-    for filou, elem in enumerate(tqdm(column_data)):
+    #for filou, elem in enumerate(tqdm(column_data)):
+    for filou, elem in enumerate(column_data):
         #print("\n JET {}\n".format(filou))
         # Initiate the information required for a jet:
         label = label_data[filou]
@@ -194,12 +208,13 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         dic_of_particles_mom_id = dict()
 
         # Set format for PyJet
-        try_in_col = np.array(elem,dtype=DTYPE_EP)
-        try_in_col.dtype.names=['E','px','py','pz']
+        jet_array = np.array(elem,dtype=DTYPE_EP)
+        jet_array.dtype.names=['E','px','py','pz']
 
-        # Cluster the constituent into a jet with Radius R and antikT (p = -1).
+        # Cluster the constituent into a jet with Radius R and algorithm specified (p = -1).
         # ep = True since momenta are into shape ('E','px','py','pz')
-        sequence = cluster(try_in_col, R=0.5, p=-1, ep=True)
+        sequence = cluster(jet_array, algo= cluster_algorithm, R= cluster_radius, ep= True) #p= algo_p_value
+        
         jets = sequence.inclusive_jets()  # list of PseudoJets reconstructed from the constituents
         # There should not be more than one reconstructed jet since we're feeding the input of a single jet!
         if (len(jets) !=1):
@@ -210,7 +225,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         jet = jets[0] #jet is the first and sole element of this list
         #print("The inclusive jet is ",jet)
         seed_momentum = get_4mom_EM_rel(jet, jet)
-        #print("Jet info global = ", get_4mom_EM_rel(jet, jet))
+        #print("Jet info global = ", seed_momentum)
             
         # Let's recuperate the final states particles: those we fed.
         # Note that the stored information is relative to the top jet! This is not the absolute
@@ -218,9 +233,10 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         for ind, consti in enumerate(jet):
             #print("Elem {}: {}".format(ind, consti))
             #print("Elem {} relative: {}".format(ind, get_4mom_EM_rel(consti, jet)))
-            CSJets[ind] = get_4mom_EM_rel(consti, jet)
-            dic_of_particles_id_mom[ind] = get_4mom_EM_rel(consti, jet)
-            dic_of_particles_mom_id[tuple(get_4mom_EM_rel(consti, jet))] = ind
+            constituent = get_4mom_EM_rel(consti, jet)
+            CSJets[ind] = constituent
+            dic_of_particles_id_mom[ind] = constituent
+            dic_of_particles_mom_id[tuple(constituent)] = ind
 
         """
         for ind, consti in enumerate(jet.constituents_array()):#ep=True)):
@@ -235,11 +251,80 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         for ind, elem in enumerate(CSJets):
         print("{}, {}\n".format( ind, elem))
         """
+        particles_available = list(jet)
+
+        # This is the state of the jet through each step of the algorithm. Will be translated into jet indices later.
+        # For now its bottom-up (final state particles to mother particle). This will be inverted after the while loop.
+        CS_ID_intermediate_states.append([tuple(get_4mom_EM_rel(subjet, jet)) for subjet in particles_available])
+
+        possible_mothers = []          # tracks mothers available for selection a step (both daughters are in intermediate state)
+        particles_step = particles_available.copy() # tracks available daughter at step that haven't yet been matched to a mother
+        number_branching = 0
+        location_First_None = multiplicity #the first avilable value in CSJet (the one after the final state particles).
+        while (number_branching < n_branchings):
+            next_particles_step = list()
+            observed_candidate_mothers = []
+            for elem in particles_step:
+                mother_part = elem.child #remember the note from function definition: PyJet child is in fact the mother.
+                if mother_part in observed_candidate_mothers:
+                    # Mother has already been observed (you stumbled upon the second daughter)
+                    continue
+                
+                daughter1, daughter2 = mother_part.parents
+                if not(daughter1 in(particles_step) and daughter2 in(particles_step)):
+                    # One of the daughter is not yet in the list, reconsider the case later when both are there
+                    next_particles_step.append(elem)
+  
+                else:
+                    # Case where both daughters are there: add mother to potential list of next particle
+                    deltaR2 = (daughter1.eta - daughter2.eta)**2 + (daughter1.phi - daughter2.phi)**2
+                    possible_mothers.append((deltaR2, mother_part))
+                    observed_candidate_mothers.append(mother_part)
+
+            # Select the mother in the branching where deltaR**2 is minimised between components
+            # Important: note that is also works for anti-kT as there will be only one possible mother (since a core particle gets all soft radiations added to it).
+            min_deltaR2, selected_mother = min(possible_mothers)
+            possible_mothers.remove((min_deltaR2, selected_mother))    # the selected mother should no longer be considered for next iteration
+            step_daughter1, step_daughter2 = selected_mother.parents   # Retrieve the selected mother's daughters
+
+            # Add the selected mother to information gathered
+            selected_mother_info = get_4mom_EM_rel(selected_mother, jet)
+            CSJets[location_First_None] = selected_mother_info
+            dic_of_particles_id_mom[location_First_None] = selected_mother_info
+            dic_of_particles_mom_id[tuple(selected_mother_info)] = location_First_None
+
+            # Add info on branching (branching, mother and daughters)
+            temp_branching_pjet.append([selected_mother ,[step_daughter1, step_daughter2] ])
+            mother_momenta.append(selected_mother_info)
+            daughter_momenta.append([get_4mom_EM_rel(step_daughter1, jet), get_4mom_EM_rel(step_daughter2, jet)])
+
+            # Update and store intermediate state
+            particles_available.remove(step_daughter1)
+            particles_available.remove(step_daughter2)
+            particles_available.append(selected_mother)
+            CS_ID_intermediate_states.append([tuple(get_4mom_EM_rel(subjet, jet)) for subjet in particles_available])
+
+            # Prepare next iteration
+            next_particles_step.append(selected_mother)
+            particles_step= next_particles_step
+            number_branching += 1
+            location_First_None += 1
+                
+            #print("N_branching currently = {}, total = {}".format(number_branching, n_branchings))
+        # End of "while"
+        
+        # Reverse the list created along the above iteration.
+        # This is required has the iteration was bottom-up (starting with final state particles, go back to mother one) while JUNIPR starts with top-mother
+        CS_ID_intermediate_states.reverse()
+        mother_momenta.reverse()
+        daughter_momenta.reverse()
+        temp_branching_pjet.reverse()
+
+        """
         list_elem = [jet]
         list_elem_updated = []
         stock_new_elem = []
         location_last_None = multiplicity + n_branchings - 1 # Track this one to add the next decaying intermediary particle at the last of the None
-        CS_ID_intermediate_states.append([tuple(get_4mom_EM_rel(jet, jet))]) # This is the state of the jet through each step of the algorithm. Will be translated into jet indices later
         while (len(list_elem) < multiplicity):
             #print("Before for ", list_elem)
             for elem in list_elem:
@@ -254,6 +339,8 @@ def perform_antiKT(jet_pdf, constituent_pdf):
                     list_elem_updated.extend([sub_jet1, sub_jet2])
                     # stock new intermediary particles: does that have parents
                     # (otherwise they're final state and we already have them).
+                    print("Particle 1 daughter: ", sub_jet1.child)
+                    print("Particle 2 daughter: ", sub_jet2.child)
                     if sub_jet1.parents:
                         stock_new_elem.append(sub_jet1)
                     if sub_jet2.parents:
@@ -261,11 +348,11 @@ def perform_antiKT(jet_pdf, constituent_pdf):
                     mother_momenta.append(get_4mom_EM_rel(elem, jet))
                     temp_branching_pjet.append([elem ,[sub_jet1,  sub_jet2] ])
                     daughter_momenta.append([get_4mom_EM_rel(sub_jet1, jet), get_4mom_EM_rel(sub_jet2, jet)])
-                    """
+                    
                     print("Subjet1 ",sub_jet1)
                     print("Subjet2 ",sub_jet2.constituents_array(ep=True))
                     print("Subjet1 ", get_4mom(sub_jet1))
-                    """
+            
                 else:
                     list_elem_updated.append(elem)
             # end "for"
@@ -273,7 +360,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
             CS_ID_intermediate_states.append([tuple(get_4mom_EM_rel(subjet, jet)) for subjet in list_elem_updated])
             list_elem_updated = []
         # end "while"
-        
+        """
         """
         print("CSJETS after the new \n")
         for ind, elem in enumerate(CSJets):
@@ -282,17 +369,17 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         """
         print("The new elements uncovered \n")
         for ind, elem in enumerate(stock_new_elem):
-        print("{}, {}\n".format( ind, get_4mom(elem)))
+            print("{}, {}\n".format( ind, get_4mom(elem)))
         """
         """
         # To check that the final elements are indeed the inital particles
         for elem in list_elem:
-        print("Does elem {} has parents? {}".format(elem, elem.parents))
+            print("Does elem {} has parents? {}".format(elem, elem.parents))
         """
         """
         print("The dictionnary\n")
         for key in dic_of_particles_mom_id:
-        print("{}, {}\n".format(key, dic_of_particles_mom_id[key]))
+            print("{}, {}\n".format(key, dic_of_particles_mom_id[key]))
         """
         """
         # Checking the mother and daughters momenta list.
@@ -333,7 +420,21 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         for elem in daughter_momenta:
             CS_ID_daugthers.append([dic_of_particles_mom_id[tuple(elem[0])], dic_of_particles_mom_id[tuple(elem[1])]  ])
 
+        """
+        print("\nChecking jet state with indices\n")
+        for cou, entry in enumerate(CS_ID_intermediate_states_ind):
+            print("{}, {}".format(cou, entry))
+
+        print("\nChecking mother id\n")
+        for elem in CS_ID_mothers:
+            print("{}\n".format(elem))
+        print("\nChecking daughter id\n")
+        for elem in CS_ID_daugthers:
+            print("{}\n".format(elem))
+        """
+
         # With the info just gathered, write list of mother_id_energy_order
+
         mother_id_energy_order.append(0)
         for counter, present_mother in enumerate(CS_ID_mothers):
             # present_mother is the one decaying at the row considered.
@@ -344,17 +445,11 @@ def perform_antiKT(jet_pdf, constituent_pdf):
             mother_id = CS_ID_intermediate_states_ind[counter].index(present_mother)
             mother_id_energy_order.append(mother_id)
         """
-        print("\nChecking jet state with indices\n")
-        for cou, entry in enumerate(CS_ID_intermediate_states_ind):
-            print("{}, {}".format(cou, entry))
-        
-        print("\nChecking mother id\n")
-        for elem in CS_ID_mothers:
-            print("{}\n".format(elem))
-        print("\nChecking daughter id\n")
-        for elem in CS_ID_daugthers:
-            print("{}\n".format(elem))
+        print("\nChecking mother_energy_order\n")
+        for cou, elem in enumerate(mother_id_energy_order):
+            print("{}, {}\n".format(cou, elem))
         """
+
         # Now the branching info. Start with temp_branching_pjet
         # dataformat is [ [mother, [daughter1, daughter 2] , ... ]
         # Warning: all of these are still in absolute coordinate. I believe this is normal
@@ -367,7 +462,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         """
         print("\nChecking branching\n")
         for cou, elem in enumerate(branching):
-        print("{}, {}\n".format(cou, elem))
+            print("{}, {}\n".format(cou, elem))
         """
 
         # Now make a dictionnary with these entry and add it to the junipr_ready_datapoint list
@@ -386,6 +481,7 @@ def perform_antiKT(jet_pdf, constituent_pdf):
         datapoint["daughter_momenta"] = daughter_momenta
 
         junipr_ready_datapoint.append(datapoint)
+        
     collected_data["JuniprJets"] = junipr_ready_datapoint
     return collected_data
 

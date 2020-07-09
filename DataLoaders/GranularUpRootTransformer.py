@@ -70,12 +70,15 @@ class GranularUpRootTransformer(ABC):
         
         self.path = config.get(["GranularUpRootTransformer", "save_path"])
         self.save_tables_bool = config.get(["GranularUpRootTransformer", "save_tables"])
-        self.do_JUNIPR_transform_bool = config.get(["GranularUpRootTransformer", "JUNIPR_transform"])
-        self.save_JUNIPR_transform_bool = config.get(["GranularUpRootTransformer", "save_JUNIPR_transform"])
         self.save_csv_bool = config.get(["GranularUpRootTransformer", "to_CSV"])
         self.save_hdf_bool = config.get(["GranularUpRootTransformer", "to_HDF5"])
-        
         self.clean_jets_bool = config.get(["GranularUpRootTransformer", "clean_jets"])
+        
+        self.do_JUNIPR_transform_bool = config.get(["GranularUpRootTransformer", "JUNIPR_transform"])
+        self.save_JUNIPR_transform_bool = config.get(["GranularUpRootTransformer", "save_JUNIPR_transform"])
+        self.JUNIPR_cluster_algo= config.get(["GranularUpRootTransformer", "JUNIPR_cluster_algo"])
+        self.JUNIPR_cluster_radius= config.get(["GranularUpRootTransformer", "JUNIPR_cluster_radius"])
+
         add_to_path = ""
         if self.clean_jets_bool:
             add_to_path = "cut_"
@@ -123,8 +126,8 @@ class GranularUpRootTransformer(ABC):
               
         Returns the two dataframes filtered.
         """
-        c_pdf = constituent_pdf.copy(deep = True)
-        j_pdf = jet_pdf.copy(deep = True)
+        c_pdf = constituent_pdf.iloc[:200,:].copy(deep = True)
+        j_pdf = jet_pdf.iloc[:200,:].copy(deep = True)
         # Translate MeV distributions into GeV ones
         for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_constituent:
             c_pdf[var] =  c_pdf[var].div(1000)
@@ -173,7 +176,6 @@ class GranularUpRootTransformer(ABC):
         
         # Small check: no constituent should have a negative energy. If this happens, drop these constituents
 
-
         return c_pdf, j_pdf
     
     def run_uproot(self):
@@ -215,8 +217,8 @@ class GranularUpRootTransformer(ABC):
                 self.compare_dataset_info(jet_pdf, constituent_pdf, file_name)
             if self.do_JUNIPR_transform_bool:
                 start = time.process_time()
-                dictionnary_result = perform_antiKT(jet_pdf, constituent_pdf)
-                print("Time for antiKT {}".format(time.process_time() - start))
+                dictionnary_result = perform_clustering(self.JUNIPR_cluster_algo, self.JUNIPR_cluster_radius, jet_pdf, constituent_pdf)
+                print("Time for jet clustering to JUNIPR {}".format(time.process_time() - start))
                 if self.save_JUNIPR_transform_bool:
                     self.save_junipr_data_to_json(dictionnary_result, file_name)
             
@@ -240,7 +242,7 @@ class GranularUpRootTransformer(ABC):
         Saves a junipr-ready data dicitonnay to a json file located self.save_path_junipr/ + file_name.json
         """
         os.makedirs(self.save_path_junipr, exist_ok=True)
-        file_name = "example_JUNIPR_data"
+        file_name = "example_JUNIPR_data_CA"
             #with open( os.path.join(self.save_path_junipr, file_name+ ".json"), "w") as write_file:
         with open( file_name+ ".json", "w") as write_file:
             json.dump(dictionnary, write_file, indent=4)
