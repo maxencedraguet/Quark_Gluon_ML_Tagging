@@ -21,14 +21,14 @@
     * Yesterday I finished processing another ttbar file from the DAOD_JETM8 family. It showed something strange in the jet variables (after cuts removing jet with pT < 20 GeV and less than 5 constituents). Below is a histogram of the number of track with a pT of at least 500 (left) and 1000 (right) for each jet (NumTrkPt500 and NumTrkPt1000). 
     
     <p float="center">
-    <img src="Readme_Result/jetNumTrkPt500.png" width="350" />
-    <img src="Readme_Result/jetNumTrkPt1000.png" width="350" />
+    <img src="Readme_Result/Diag_cut/jetNumTrkPt500.png" width="350" />
+    <img src="Readme_Result/Diag_cut/jetNumTrkPt1000.png" width="350" />
     </p>
         
     * And following is a histogram of jet with  a summed of track pT of at least 500 (SumTrkPt500).
     
     <p float="center">
-    <img src="Readme_Result/jetSumTrkPt500.png" width="350" />
+    <img src="Readme_Result/Diag_cut/jetSumTrkPt500.png" width="350" />
     </p>
     
     * These variable seem to suggest a strange peak at 0. I have no idea if this is to be expected or should be removed.
