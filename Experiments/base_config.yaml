@@ -6,11 +6,13 @@ dataset:                            Set4                      # Data to use (Set
 # Path to the dataset directory. SHOULD MATCH THE DATASET INDICATED JUST ABOVE
 #   For Set 1: a directory with the CSV for test (all ttbar)
 #   For Set 2/3: the complete path to the h5 file: /data/atlas/atlasdata3/mdraguet/Set[2 or 3]/HF/
-#   For Junipr dataset (Set 4): ../example_JUNIPR_data.json
+#   For Junipr dataset (Set 4) example: ../example_JUNIPR_data.json
+#   For Junipr dataset (Set 4): /data/atlas/atlasdata3/mdraguet/Set4/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6.json
+
 #   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [2 or 3] /loader_list.txt
 #   For GranularUpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [4 or 5] /loader_list.txt
 #   For Train_Test_Separator: the complete path to a h5 file to split into train-validation-test: /data/atlas/atlasdata3/mdraguet/Set2/HF/mc16aprocessed.h5
-absolute_data_path:                 ../example_JUNIPR_data.json
+absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set4/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6.json
 fraction_data:                      1                         # Fraction of the data to load.
 test_size:                          0.2                       # Fraction of data to use for test
 equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
@@ -26,13 +28,13 @@ cross_section_sampler:                                        # A cross section 
 experiment_type:                    Junipr
 
 save_model:                         False                     # Whether to save the model or not
-diagnostic:                         False                     # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py, GranularUpRootTransformer, ...)
+diagnostic:                         True                      # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py, GranularUpRootTransformer, ...)
 
 NN_Model:
     lr:                             0.001
     lr_scheduler:                   True
     dropout_proba:                  0
-    epoch:                          2
+    epoch:                          10
     batch_size:                     128
     loss_function:                  BCE_log                   # Loss function to use: BCE_log (binary-cross entropy with logit), BCE (same without the sigmoid)
     initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
@@ -55,21 +57,71 @@ BDT_model:                                                    # For AdaBoostClas
 
 Junipr_Model:
     Junipr_Dataset:
-        padding_size:               30                        # Padded target size for all tensors to be batched to the recurrence (the real size is stored in n_branching)
-        padding_value:              0.0                       # The padding value.
+        padding_size:               80                        # Padded target size for all tensors to be batched to the recurrence (the real size is stored in n_branching)
+        padding_value:              0.0                       # The padded-value. To be chosen carefully (otherwise you're gonna remove real data)
         feature_scaling_parameters: [600.0, 0.1, 1.571, 0.01]     # [E_jet, E_sub, R_jet, R_sub] used for scaling values. 1.571 value for R_jet is pi/2
         granularity:                10                        # To bin the values of branches
     lr:                             0.001
     lr_scheduler:                   True
-    epoch:                          2
-    batch_size:                     2
-    loss_function:                  BCE_log                   # Loss function to use: BCE_log (binary-cross entropy with logit), BCE (same without the sigmoid)
+    epoch:                          5
+    batch_size:                     100
     initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
     test_frequency:                 100                       # Frequency of test error estimation during traing (for plotting purpose)
     optimiser:
         type:                       adam
         params:                     [0.9, 0.999, 0.00000001]  # Parameters of the optimiser: should be general enough but could be optimised.
-        weight_decay:               0.0000001                   # Weight decay for L2 regularisation
+        weight_decay:               0.0000001                 # Weight decay for L2 regularisation
+
+    Structure:
+        branch_structure:           unique                    # Takes value "unique" or "multiple". Descibes the number of network in the branch mapping
+        Recurrent:                                            # Describe the RNN network
+            Init:                                             # Parameters of the NN mapping seed-momenta -> initial hidden-state
+                input_dimensions:   [4, 10]                   # WARNING, second number must agree with hidden_dimension of Recurrent
+                initialisation:     xavier_normal
+                nonlinearity:       tanh                      # if one layer, only end_nonlinearity matters
+                end_nonlinearity:   tanh                      # needs to be specified as the output is part of the input of RNN
+            input_dimensions:       8                         # size of the input data (the input of the RNN is input+hidden)
+            hidden_dimensions:      10                        #
+            initialisation:         xavier_normal             #
+            nonlinearity:           tanh                      #
+        JuniprEnd:
+            input_dimensions:       [10, 10, 1]               # WARNING: First dimension has to agree with Recurrent/hidden_dimensions
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a sigmoid itself
+        JuniprMother:
+            input_dimensions:       [10, 10, 80]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions/ and third with padding size
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
+        # Next one for Unique branch
+        JuniprBranch:
+            input_dimensions:       [14, 10, 40]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions and third with 4*granularity
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a the log softmax(es) itself
+        # The four next ones for Multiple branch. For each of these, third dimensions needs to agree with granularity
+        JuniprBranchZ:
+            input_dimensions:       [14, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother and last with granularity
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
+        JuniprBranchT:
+            input_dimensions:       [15, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother + 1 and last with granularity
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
+        JuniprBranchD:
+            input_dimensions:       [16, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother + 2 and last with granularity
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
+        JuniprBranchP:
+            input_dimensions:       [17, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother +  3 and last with granularity
+            initialisation:         xavier_normal             #
+            nonlinearity:           relu                      #
+            end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
+# Note: all WARNINGs above are handled in constructor of network, enforcing hidden_dimension, granularity and padding upon them
 
 Multi_model:
     # The list of models to assess in format (model_type, path_to_model, path_to_model_config.yaml, description_string)
@@ -91,11 +143,13 @@ UpRootTransformer:
 GranularUpRootTransformer:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set4/    # where to store the result
     save_tables:                    False                                    # Whether to store the intermediary tables of constituents and jets (format define below)
+    clean_jets:                     True                                     # Bool to clean the jets
     to_CSV:                         False                                    # Save to CSV
     to_HDF5:                        True                                     # Save to HDF5
     JUNIPR_transform:               True                                     # Do the JUNIPR transform
+    JUNIPR_cluster_algo:            cambridge                                # The clustering algorithm to use
+    JUNIPR_cluster_radius:          0.5                                      # The radius to use in clustering algorithm
     save_JUNIPR_transform:          True                                     # Save the result into a json file
-    clean_jets:                     True                                     # Bool to clean the jets
 
 Train_Test_Separator:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set3/HF/Separated/
