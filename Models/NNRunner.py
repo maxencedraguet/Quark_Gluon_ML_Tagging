@@ -33,7 +33,7 @@ class NNRunner(_BaseRunner):
     def __init__(self, config: Dict):
         self.extract_parameters(config)
         self.setup_NN(config)
-        self.setup_optimiser(config)
+        self.setup_optimiser()
         self.setup_dataloader(config)
         self.writer = SummaryWriter(self.result_path) # A tensorboard writer
         self.run()
@@ -65,7 +65,7 @@ class NNRunner(_BaseRunner):
         #if self.network_type = "neural_network":
         self.network = NeuralNetwork(source = "NN_Model", config=config)
         self.last_non_lin = self.network.get_last_non_linearity()
-        self.setup_loss(config=config)
+        self.setup_loss()
 
     def setup_dataloader(self, config: Dict)->None:
         """
@@ -84,7 +84,7 @@ class NNRunner(_BaseRunner):
         self.test_dataset = torch.utils.data.TensorDataset(self.data["input_test"] , self.data["output_test"])
         self.test_dataloader = torch.utils.data.DataLoader(self.test_dataset, batch_size=1, shuffle=False)
 
-    def setup_optimiser(self, config: Dict):
+    def setup_optimiser(self):
         if self.optimiser_type == "adam":
             beta_1 = self.optimiser_params[0]
             beta_2 = self.optimiser_params[1]
@@ -95,7 +95,7 @@ class NNRunner(_BaseRunner):
         else:
             raise ValueError("Optimiser {} not recognised". format(self.optimiser_type))
 
-    def setup_loss(self, config: Dict):
+    def setup_loss(self):
         if self.loss_function == "BCE_log": # binary cross entropy loss with logits (includes a sigmoid transform)
             self.loss = nn.BCEWithLogitsLoss()
         elif self.loss_function == "BCE":   # binary cross entropy loss with logits (without a sigmoid transform)

@@ -68,7 +68,7 @@ class MultimodalRunner(_BaseRunner):
         #self.list_model_loader = models_to_load.models_to_load_list
         elif self.model_folder == "store_model2":
             from store_model2 import models_to_load
-#self.list_model_loader = models_to_load.models_to_load_list
+        #self.list_model_loader = models_to_load.models_to_load_list
         else:
             raise ValueError("Model folder {} not recognised". format(self.model_folder))
         self.list_model_loader = models_to_load.models_to_load_list # expecting a list of tuples:

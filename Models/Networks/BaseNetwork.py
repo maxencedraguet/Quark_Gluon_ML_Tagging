@@ -19,7 +19,10 @@ import torch.nn.functional as F
 class _BaseNetwork(nn.Module, ABC):
     def __init__(self, config: Dict) -> None:
         super(_BaseNetwork, self).__init__()
-
+        #self.nonlinearity = self.identify_nonlinfunc(self.nonlinearity_name)
+        #self.end_nonlinearity = self.identify_nonlinfunc(self.end_nonlinearity_name)
+        #self.construct_layers()
+    
     def identify_nonlinfunc(self, name):
         if name == 'relu':
             name = F.relu
