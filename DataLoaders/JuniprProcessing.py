@@ -180,8 +180,8 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
     # the dataset is now trimmed: only got the index and the list of 4-momenta constituents. The next step would be to cluster these.
     
     # One way to cluster is to use the python implementation of fastjest : pyjet.
-    column_data = cpdf['4-mom_list'][:5].to_numpy() #only two for now [:2]
-    label_data  = cpdf['isTruthQuark'][:5].to_numpy() #only two for now [:2]
+    column_data = cpdf['4-mom_list'].to_numpy() #only two for now [:2]
+    label_data  = cpdf['isTruthQuark'].to_numpy() #only two for now [:2]
     
     collected_data = dict()
     junipr_ready_datapoint = list()

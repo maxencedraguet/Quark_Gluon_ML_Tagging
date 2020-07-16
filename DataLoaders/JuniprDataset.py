@@ -14,7 +14,7 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
-pd.set_option('display.max_rows', None)
+#pd.set_option('display.max_rows', None)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 
@@ -83,7 +83,7 @@ class JuniprDataset(Dataset):
         #CSJets           = torch.FloatTensor(targeted_jet["CSJets"])
         # return a tensor of size number_of_branching*size of a branching
         ending = torch.IntTensor()
-        mother_id_energy = targeted_jet["mother_id_energy_order"]
+        mother_id_energy = torch.IntTensor(targeted_jet["mother_id_energy_order"])
         branching        = torch.FloatTensor(targeted_jet["branching"])
         mother_momenta   = torch.FloatTensor(targeted_jet["mother_momenta"])
         # return a tensor of size number_of_branching* 2 * size of a branching
@@ -127,27 +127,40 @@ class PadTensors(object):
         padded_mother_momenta = np.ones((self.default_size, mother_momenta.size()[-1])) * self.pad_token
         padded_daughter_momenta = np.ones((self.default_size, daughter_momenta.size()[-1])) * self.pad_token
 
-        padded_branching[:branching.size()[0] , :] = branching
-        padded_mother_momenta[:mother_momenta.size()[0] , :] = mother_momenta
-        padded_daughter_momenta[:daughter_momenta.size()[0] , :] = daughter_momenta
+        padded_branching[:branching.size()[0], :] = branching
+        padded_mother_momenta[:mother_momenta.size()[0], :] = mother_momenta
+        padded_daughter_momenta[:daughter_momenta.size()[0], :] = daughter_momenta
         
         # Case of mother_id_energy: particular
         #   - has to be padded to self.output_size * self.output_size (first for recurrence, second for possible mothers)
         #   - the second dimension is actually a one-hot encoding of the index of the mother (in energy order, 0 being most energetic)
         # Hijack the process to also produced the ending tensor (size: recurrence * 1 with value 0 if going on and 1 when stop
-        padded_mother_id = np.ones((self.default_size, self.default_size)) * self.pad_token
+        padded_mother_id = np.ones((self.default_size)) * self.pad_token
+        padded_mother_id[:mother_id_energy.size()[0]] = mother_id_energy
+        
         ending_val = np.ones((self.default_size)) * self.pad_token
+        for counter, elem in enumerate(mother_id_energy):
+            ending_val[counter] = 0
+        ending_val[len(mother_id_energy)] = 1
+        
+        """
+        # This old loop encoded 1-hot way the mother_id_energy and did the ending_val.
+        #This is not necessary: each id can be returned as a class and
+        # compared to C output of mother branch (total number of possible mother id viewed as class).
+        padded_mother_id = np.ones((self.default_size, self.default_size)) * self.pad_token
         for counter, elem in enumerate(mother_id_energy):
             padded_mother_id[counter, elem] = 1.0
             ending_val[counter] = 0.0
         ending_val[len(mother_id_energy)] = 1.0
         
+        """
+        
         return { "label": sample["label"],
                  "multiplicity": sample["multiplicity"],
                  "n_branchings": sample["n_branchings"],
                  "seed_momentum": sample["seed_momentum"],
-                 "ending": ending_val,
-                 "mother_id_energy": padded_mother_id,
+                 "ending": torch.FloatTensor(ending_val),
+                 "mother_id_energy": torch.IntTensor(padded_mother_id),
                  #"CSJets": sample["CSJets"],
                  "branching": torch.FloatTensor(padded_branching),
                  "mother_momenta": torch.FloatTensor(padded_mother_momenta),
@@ -202,11 +215,12 @@ class FeatureScaling(object):
         branching[:, 2] = (branching[:, 2] -  self.branch_phi_shift) / self.branch_phi_scale
         branching[:, 3] = (np.log(np.clip(branching[:, 3], EPSILON, INF)) - self.branch_delta_shift) / self.branch_delta_scale
         #these two tests should be REMOVED in final version
+        """
         if(branching[branching<0].size()[0] !=0):
             print("Negative values in branching")
         if(branching[branching>1].size()[0] !=0):
             print("Values above 1 in branching")
-        
+        """
         # operate on each momenta (mother and daughter)
         # Mother:
         mother_momenta[:, 0] = (np.log(np.clip(mother_momenta[:, 0], EPSILON, INF)) - self.mom_e_shift) / self.mom_e_scale
@@ -244,7 +258,7 @@ class FeatureScaling(object):
                  "daughter_momenta": daughter_momenta
                 }
 
-class OneHotBranch(object):
+class GranulariseBranchings(object):
     """
     Converts the branching infos into one hot vector of given granularity
     """
@@ -253,10 +267,11 @@ class OneHotBranch(object):
     
     def __call__(self, sample):
         branching = sample["branching"]
-        # quick fix to set negative values to 0 and above 1 to (just below) 1. Normally, the parameters have been chosen so that should mostly never be necessary
-
-        branching = np.clip(branching*self.granularity, 0, self.granularity-1).int()
-
+    
+        branching_dis = np.clip(branching*self.granularity, 0, self.granularity-1).int()
+        
+        """
+        # These next line perform the one-hot encoding. This is not necessary here: keep the bin info as a class one.
         y = torch.eye(10) #this has 10 entries: the one hot encoding of int value 0 to 9
         #torch.cat([y[0], y[1], y[2], y[3]], dim = 0)
         branching_dis = torch.empty(branching.size()[0], branching.size()[1]* self.granularity, dtype=torch.int)
@@ -265,6 +280,7 @@ class OneHotBranch(object):
                                                y[branching[row, 1].item()],
                                                y[branching[row, 2].item()],
                                                y[branching[row, 3].item()]], dim = 0)
+        """
         return {"label": sample["label"],
                 "multiplicity": sample["multiplicity"],
                 "n_branchings": sample["n_branchings"],

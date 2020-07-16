@@ -18,7 +18,7 @@ from .BaseDataLoader import _BaseDataLoader
 
 import numpy as np
 import pandas as pd
-pd.set_option('display.max_rows', None)
+#pd.set_option('display.max_rows', None)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 
@@ -28,7 +28,7 @@ from torchvision import transforms, utils
 from torch.utils.data import random_split
 
 from Utils import get_dictionary_cross_section
-from .JuniprDataset import JuniprDataset, PadTensors, FeatureScaling, OneHotBranch
+from .JuniprDataset import JuniprDataset, PadTensors, FeatureScaling, GranulariseBranchings
 
 class DataLoader_Set4(_BaseDataLoader):
     def __init__(self, config: Dict) -> None:
@@ -58,9 +58,10 @@ class DataLoader_Set4(_BaseDataLoader):
         # Set up the transforms to apply to the dataset
         pading = PadTensors(self.padding_size, self.padding_value)
         scaling = FeatureScaling(self.feature_scaling_params)
-        onehot = OneHotBranch(self.granularity)
+        onehot = GranulariseBranchings(self.granularity)
         # Compose these, beware of the order.
         composed = transforms.Compose([scaling, onehot, pading])
+        #composed = transforms.Compose([scaling, onehot])
         
         # Create a JuniprDataset class (inheriting from the PyTorch dataset class) with the data contained in self.data_path
         dataset = JuniprDataset(self.data_path, transform = composed)

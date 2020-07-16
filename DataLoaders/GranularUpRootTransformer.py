@@ -92,16 +92,18 @@ class GranularUpRootTransformer(ABC):
 
     def get_inputs_list(self)->None:
         """
-        NOTE: FOR NOW THIS ONLY READS ONE FILE
-        Given a file with a list directories (only those uncommented), extract a list of all lowest children directories.
-        Appropriate for loading in bulk root files contained in these children directories (note that any root file at the
-        same level as a directory is discarded: only the leaves are loaded)
-        
+        Given a file with a list of target root file (only those uncommented).
+
         Input: file containing directories paths
         Output: a list of children directories from (uncommented) fed directories
         """
-        self.inputs_list = ["/data/atlas/atlasdata3/mdraguet/Set4/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r10201_r10210_p4128.root"]
-    
+        self.inputs_list = []
+        with open(self.data_file, 'r') as input_file:
+            for dir_path in input_file.readlines():
+                dir_path = dir_path.rstrip('\n')
+                if not dir_path.startswith("#"):
+                    self.inputs_list += [dir_path]
+
     def make_df(self, input_file, tree_name, branches):
         """
         Turn the specified branches of the input tree from the input file
@@ -126,14 +128,15 @@ class GranularUpRootTransformer(ABC):
               
         Returns the two dataframes filtered.
         """
-        c_pdf = constituent_pdf.iloc[:200,:].copy(deep = True)
-        j_pdf = jet_pdf.iloc[:200,:].copy(deep = True)
+        c_pdf = constituent_pdf.copy(deep = True)
+        j_pdf = jet_pdf.copy(deep = True)
         # Translate MeV distributions into GeV ones
         for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_constituent:
             c_pdf[var] =  c_pdf[var].div(1000)
         for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_jet:
             j_pdf[var] =  j_pdf[var].div(1000)
         
+        # Small check: no constituent should have a negative energy. If this happens, drop these constituents
         if (any(c_pdf['constituentE']) < 0):
             print("There are some constituents with negative energy!")
             bad_constituent_indices = c_pdf[(c_pdf['constituentE'] <= 0.0)].index
@@ -173,8 +176,6 @@ class GranularUpRootTransformer(ABC):
         print("Initial shape constituent ", c_pdf.shape)
         c_pdf = pd.merge(c_pdf, j_pdf_small, how='inner', left_on=['entry', 'constituentJet'], right_on=['entry', 'subentry'])
         print("Final shape constituent ", c_pdf.shape)
-        
-        # Small check: no constituent should have a negative energy. If this happens, drop these constituents
 
         return c_pdf, j_pdf
     
@@ -189,7 +190,8 @@ class GranularUpRootTransformer(ABC):
         for file in self.inputs_list:
             # Get the filename: the lowest directory (where the root files are stored).
             file_name = file.split("/")[-1]
-            super_file_name = file.split("/")[-2]
+            file_name = file_name.split(".")[:5]
+            file_name = "_".join(file_name)
             print("Processing : ", file_name)
 
             # List of variables
@@ -209,12 +211,14 @@ class GranularUpRootTransformer(ABC):
                 if self.save_csv_bool:
                     self.save_to_csv(constituent_pdf, file_name)
                 if self.save_hdf_bool:
-                    self.save_to_h5(constituent_pdf, super_file_name, file_name)
+                    self.save_to_h5(constituent_pdf, file_name)
+        
             if self.diagnostic_bool:
                 self.diagnostic_plots(constituent_pdf, file_name, constituent_vars)
                 self.diagnostic_plots(jet_pdf, file_name, jet_vars)
                 # Some constituent to jet comparison
                 self.compare_dataset_info(jet_pdf, constituent_pdf, file_name)
+            
             if self.do_JUNIPR_transform_bool:
                 start = time.process_time()
                 dictionnary_result = perform_clustering(self.JUNIPR_cluster_algo, self.JUNIPR_cluster_radius, jet_pdf, constituent_pdf)
@@ -229,23 +233,24 @@ class GranularUpRootTransformer(ABC):
         Save a panda df to csv in a CSV folder in save_path_csv.
         """
         os.makedirs(self.save_path_csv, exist_ok=True)
-        pdf.to_csv(os.path.join(self.save_path_csv, file_name + '_all.csv'))
-    def save_to_h5(self, pdf, super_file_name, file_name)->None:
+        pdf.to_csv(os.path.join(self.save_path_csv, file_name + '.csv'))
+    
+    def save_to_h5(self, pdf, file_name)->None:
         """
         Save a panda df to hdf5 in a HF folder in save_path_hf. Several files would be copied in the same HF using the name of the file as key.
         """
         os.makedirs(self.save_path_hf, exist_ok=True)
-        pdf.to_hdf(os.path.join(self.save_path_hf, super_file_name+ 'processed.h5'), key = file_name)
+        pdf.to_hdf(os.path.join(self.save_path_hf, file_name + '.h5'), key = file_name)
 
     def save_junipr_data_to_json(self, dictionnary, file_name):
         """
         Saves a junipr-ready data dicitonnay to a json file located self.save_path_junipr/ + file_name.json
         """
         os.makedirs(self.save_path_junipr, exist_ok=True)
-        file_name = "example_JUNIPR_data_CA"
+        #file_name = "example_JUNIPR_data_CA"
             #with open( os.path.join(self.save_path_junipr, file_name+ ".json"), "w") as write_file:
-        with open( file_name+ ".json", "w") as write_file:
-            json.dump(dictionnary, write_file, indent=4)
+        with open( os.path.join(self.save_path_junipr, file_name + '.json'), "w") as write_file:
+            json.dump(dictionnary, write_file) #, indent=4)
 
     def diagnostic_plots(self, df, file_name, vars):
         """

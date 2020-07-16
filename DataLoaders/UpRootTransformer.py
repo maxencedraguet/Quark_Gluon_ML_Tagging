@@ -77,7 +77,8 @@ class UpRootTransformer(ABC):
             print('Finding your directories...')
             for dir_path in input_file.readlines():
                 dir_path = dir_path.rstrip('\n')
-                if not dir_path.startswith("#"): self.directory_list += [dir_path]
+                if not dir_path.startswith("#"):
+                    self.directory_list += [dir_path]
                 print(dir_path)
         # Get all the lowest level directories
         for dir_path in self.directory_list:
@@ -130,9 +131,9 @@ class UpRootTransformer(ABC):
         pdf.drop(drop_indices_analysis , inplace=True)
 
         # Turns variables given in MeV into GeV.
-        pdf['jetSumTrkPt500'] = pdf['jetSumTrkPt500'].div(1000)
+        pdf['jetSumTrkPt500']  = pdf['jetSumTrkPt500'].div(1000)
         pdf['jetSumTrkPt1000'] = pdf['jetSumTrkPt1000'].div(1000)
-        pdf['jetEnergy'] = pdf['jetEnergy'].div(1000)
+        pdf['jetEnergy']       = pdf['jetEnergy'].div(1000)
 
         return pdf
     
