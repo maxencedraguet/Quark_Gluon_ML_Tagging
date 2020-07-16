@@ -44,7 +44,7 @@
 * Note: I still have an annoying issue with the scaling of data. Since jets here are not restrained to an energy-radius window, the data lacks a natural scaling. I implemented somethign supposedly quite general to bring most of the data into the range [0, 1]. This works well for most data but about 4% of branchings fall out of the window and are therefore trimmed to 0 or 1. This is not dramatic since later on the branching data is discretised into 10 (for now) bins so in any case it would fall in their assigned bins. I am however afraid that this might blur out some information. The scaling functions are (for now too) taken directly from Junipr: 
 
 <p float="center">
-<img src="Readme_Result/equations_of_scaling.png" width="150" />
+<img src="Readme_Result/equations_of_scaling.png" width="250" />
 </p>
 
 
