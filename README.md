@@ -2,43 +2,53 @@
 ## Meetings
 ### Recent progress: 
 
-* Modified the cut: no truth info. Left truth of jet, right energy constituents
-
-<p float="center">
-<img src="Readme_Result/isTruthQuark.png" width="350" />
-<img src="Readme_Result/constituentE_log.png" width="350" />
-</p>
-
-* I focused solely on setting up the dataloading for a Junipr-like model implemented in PyTorch. Several difficulties are faced:
-
-    * The implementation differs significantly from that of the authors that adopted TensorFlow.Keras (their implementation is available on [this github page](https://github.com/andersjohanandreassen/JUNIPR)). The interest of "re-inventing" this wheel is that PyTorch allows for greater control in the training loop, is more flexible for implementation on GPU's and arguably faster. A significant advantage is that seeding (removing "randomness") is total in PyTorch while Keras could be criticised for leaving randomness in the RNN modules. Finally, a major interest in re-writing the whole structure is that it requires a deep understanding of every element included. 
+* Finished implementing the JUNIPR network:
+    * The data can now pass through all components in batch form (this is preferable to one-event at a time for optimality reasons). Sole weakness: computing the loss. This is due to each event having a different sequence length (a sequence in this case is the number of node in the tree, each node being fed to the recurrent network sequentially). For the loss module, the computed value therefore have to be restrained to the real sequence length and not the padded one. If, in testing time, the implementation proves too slow, I could explore a batch-friendly implementation of the loss (using mask on indices matching padded values as observed from the target info).
     
-    * The data considered here is intrinsically of various size: jet-trees differ in length. This demands some care in writing batch loaders: dimensions must agree. This is dealt with in two steps:
-    
-        *  An own class inheriting from PyTorch dataset class, in DataLoaders/JuniprDataset.py, structures all input to look alike. Padding (filling a various size tensor into a larger- and fixed-size tensor of padding values) is used with the real size of each input accessible from multiplicity and n_branching information. The system has been checked to produce batches of expected behaviour.
-        
-        * A Dataloader_Set4 codebase creates this intelligent dataset, splits it into training/testing and returns two PyTorch dataloaders (for training and testing). These are then retrieved in the JuniprRunner routine (from the Models/ folder) to bring the data to the locally implemented PyTorch-esque model. The running loop of this model will stop the training/evaluating of data_input having reached their end size (so that no padded_value passes through).
-        
-        * One of the important roles of the JuniprDataset class is to facilitate certain specific operations on the data. Mainly: scaling, padding and "one-hot-vectoring". The first one reduces the amount of global parametric shift required in optimisation, while the other ones perform the aforementioned operation and the task of one-hot encoding (discretise input data into an encoding setting a 1 in a vector of 0's for the index matching the fed data; for example, a depth-two hot encoding of [1, 2] is simply [(1,0), (0,1)]). An issue with the first step is apparent now: since we do not restrain to a specific jet energy window (the author focus on 450-550 GeV jets), the model lacks natural parameters to evenly scale its inputs variables in the range [0, 1]. I adapted the parameter of this scaling to be as general as possible. This is necessary for the one-hot encoding pass after the granular operation (see next point), because no value can be outside of the [0, 1] range for the following encoding step. A safety net is implemented by clipping values outside the range. 
-    
-    * The need for one-hot encoding and granular transformation concerns the branching information. A branching is parametrised by x = [z, theta, phi, delta], respectively the soft-daughter energy fraction, the soft-daughter to mother angle, the angle of the plane of decay with respect to mother and y-axis of the detector, and the hard-daughter to mother angle. The info is first scaled (using the scaling operation discussed just above) in the range [0,1]. The authors of JUNIPR observed that having a discretised probability distribution over these branching is sufficient for the network to learn. Therefore, possible values of x (living in R^4, r being the set of real numbers) are binned into granularity^4 (each variable in x gets 10 bins). They chose granularity = 10,  meaning for example that x = [0.11, 0.32, 0.21, 0.12] gets discretised to [1, 3, 2, 1]. For computational use, this is then turned into a one-hot vector (so that softmax operation can be used to select each of the 4 component of the binned x). A smaller example of this processing would be, for a variable m = [a, b] and two bins: [0.3, 0.6] -> [0, 1] -> [(1, 0), (0,1)]. Therefore, the encoding of [0.3, 0.6] would simply be 1001 and two softmax (one over the two first values and the other one over the last) would recognise such data.
-    (<i>Note: I am actually moving slightly away from JUNIPR here since they one-hot encoded the discretised x values directly, not the discretised components. This means their encoding is of size 10^4 (a vector of 10^4 - 1 nulls with a 1 to indicate which x value it is. The encoding here is of size 10 X 4, significantly smaller. Thansk to PyTorch, implementing several softmax operation on restriction of the output is easily implementable.</i>)
-    
-* To clarify, the following schema characterises the locally implemented Junipr structure:
-
-<p float="center">
-<img src="Readme_Result/JuniprStructure.png" width="800" />
-</p>
-
-* An important weakness that will require great care when analysing the network has been uncovered. It relates to the use of the anti-kT algorithm (over Cambridge-Aachen method or other). Indeed, this jet clustering method does not approximate the natural collinear structure of QCD. The hidden state of the recurrent network has to retain far more information in the case of anti-kT than, for example, C/A. To understand this point, some analysis of the anti-kT algorithm is required. In its process, it recombines to the <b>highest energy </b> final state particle with softer radiations (other final and intermediary (after the first step) states particles). This means that the mother in the anti-kT algorithm is <b>always</b> the most energetic particle at a given step. This has a profound implication on the JUNIPR structure. A whole branch of the model is tasked with predicting the index of the next mother in an energy-based ordered list of particles present at a given step. With anti-kT, this is trivially the first item of such a list for all steps (since the mother is always the most energetic). Such a network would learn an utterly useless mapping, setting the mother prediction to output the first index being right in all instances. The authors have tried this method and still obtained some good results in the task of discrimination (less so when considering generating new jets).The following two jet trees come from the JUNIPR paper and present, on the left side, the output for an A/C algorithm and, on the right side, that for the anti-kT. 
-
     <p float="center">
-    <img src="Readme_Result/CAcluster.png" width="300" />
-    <img src="Readme_Result/antikt.png" width="400" />
+    <img src="Readme_Result/junipr_structure.png" width="800" />
+    </p>
+
+    * Modified slightly the structure compared to last week. In particular: 
+        * no need for one-hot encoding of branching info. Instead, each bin is now seen as a class and the cross-entropy naturally implements the probability reduction.
+        * no need for data input on end sequence (0 for going on, 1 for stopping). This is directly deduced from the number of branching (this reduces the size of batch)
+        * implemented 2 factorisations of branching:
+        * a first one sees the branching  network as a single MLP going to 4 * <i>granularity</i> (z, t, p and d deduced from single MLP) with input info being hidden + mother momenta
+        * a second one sees the branching network as 4 MLP's. A first one outputs <i>granularity</i> values to deduce z from hidden + mother momenta. Another networks outputs t (<i>granularity</i> outputs) using hidden + mother momenta + <b>z info (from input)</b>. Similarly, for d using hidden + mother momenta + <b>z  + t info from inputs</b> and for p using hidden + mother momenta + <b>z + t  +d info from inputs</b>
+
+* Currently running the different data processing programs on samples of DAOD_JETM6 and DAOD_JETM8. The M6 have ttbar info and M8 have the dijet and Z+jet. A minor issue oberved is that M8 does not have the sort of jet I'm currently using ("AntiKt4EMTopoJets") and the only common ones with M6 are "AntiKt4EMPFlowJets" and "AntiKt4TruthJets". Options are either to change to sort of jet studied (so that data is processed similarly for each label and spurious differences are introduced) or gather data from different distributions (such as M7). Note that M6 is currently being modified so not all data files were accessible previously (this seems to be the origin of the failure of the grid processing). The issue migth have been solved in the meantime. I'll see with Aaron what we can get. 
+    
+    * Yesterday I finished processing another ttbar file from the DAOD_JETM8 family. It showed something strange in the jet variables (after cuts removing jet with pT < 20 GeV and less than 5 constituents). Below is a histogram of the number of track with a pT of at least 500 (left) and 1000 (right) for each jet (NumTrkPt500 and NumTrkPt1000). 
+    
+    <p float="center">
+    <img src="Readme_Result/jetNumTrkPt500.png" width="350" />
+    <img src="Readme_Result/jetNumTrkPt1000.png" width="350" />
+    </p>
+        
+    * And following is a histogram of jet with  a summed of track pT of at least 500 (SumTrkPt500).
+    
+    <p float="center">
+    <img src="Readme_Result/jetSumTrkPt500.png" width="350" />
     </p>
     
-It is apparent that more information regarding the global jet has to be retained by the network in the anti-kT case (the last branching info offers little information on the global jet behaviour while in the C/A case the specific particle decaying is informative). 
+    * These variable seem to suggest a strange peak at 0. I have no idea if this is to be expected or should be removed.
     
+* Next steps:
+    * implementing a way to visualise the probability on a tree structure (as done in Junipr paper),
+    * training the model on large datasets (in progress, seems to work fine for the moment),
+    * optimising the structure,
+    * train on same dataset the BDT and NN,
+    * compare models
+    * possibly: quickly go through the steps of a particle flow network (simpler to implement, it takes the final constituents as an unordered list and output a graph with a complex convolution operations implemented through NN's). This model was also shown to be state of the art for a different jet task. 
+
+* Note: I still have an annoying issue with the scaling of data. Since jets here are not restrained to an energy-radius window, the data lacks a natural scaling. I implemented somethign supposedly quite general to bring most of the data into the range [0, 1]. This works well for most data but about 4% of branchings fall out of the window and are therefore trimmed to 0 or 1. This is not dramatic since later on the branching data is discretised into 10 (for now) bins so in any case it would fall in their assigned bins. I am however afraid that this might blur out some information. The scaling functions are (for now too) taken directly from Junipr: 
+
+<p float="center">
+<img src="Readme_Result/equations_of_scaling.png" width="350" />
+</p>
+
+
+
 
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
