@@ -64,7 +64,7 @@ if __name__ == "__main__":
         runner = Models.NNRunner(config=experiment_parameters)
 
     elif experiment_parameters.get(["experiment_type"]) == "Junipr":
-        #experiment_parameters.save_configuration(log_path)
+        experiment_parameters.save_configuration(log_path)
         runner = Models.JuniprRunner(config=experiment_parameters)
 
     elif experiment_parameters.get(["experiment_type"]) == "Multi_model":
