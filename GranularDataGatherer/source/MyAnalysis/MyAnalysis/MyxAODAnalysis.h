@@ -51,8 +51,9 @@ private:
   std::vector<float> *m_jetPt = nullptr;
   std::vector<float> *m_jetE = nullptr;
   std::vector<float> *m_jetWidth = nullptr;
-  std::vector<int> *m_jetNumberConstituent = nullptr;
+  std::vector<int>   *m_jetNumberConstituent = nullptr;
     
+  std::vector<int>  *isNotPVJet = nullptr;
   std::vector<char> *isBadJet = nullptr;
   std::vector<char> *isBaselineJet = nullptr;
   std::vector<char> *isSignalJet = nullptr;

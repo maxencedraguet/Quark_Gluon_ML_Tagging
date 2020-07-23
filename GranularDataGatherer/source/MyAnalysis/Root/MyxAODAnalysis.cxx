@@ -57,6 +57,8 @@ StatusCode MyxAODAnalysis :: initialize ()
   mytree->Branch ("jetNumberConstituent", &m_jetNumberConstituent);
 
   //Jet quality cuts.
+  isNotPVJet = new std::vector<int>();
+  mytree->Branch ("isNotPVJet", &isNotPVJet);
   isBadJet = new std::vector<char>();
   mytree->Branch ("isBadJet", &isBadJet);
   isBaselineJet = new std::vector<char>();
@@ -169,6 +171,7 @@ StatusCode MyxAODAnalysis :: execute ()
   m_jetNumberConstituent->clear();
     
   //Jet quality and tagging.
+  isNotPVJet->clear();
   isBJet->clear();
   isBaselineJet->clear();
   isSignalJet->clear();
@@ -229,7 +232,7 @@ StatusCode MyxAODAnalysis :: execute ()
   if (ei->eventType (xAOD::EventInfo::IS_SIMULATION)) {
     isMC = true;
   }
-  ANA_MSG_INFO ("is MC: " << isMC);
+  //ANA_MSG_INFO ("is MC: " << isMC);
 
   //Retrieve event and run number.
   m_runNumber = ei->runNumber ();
@@ -315,7 +318,7 @@ StatusCode MyxAODAnalysis :: execute ()
     m_jetPt-> push_back(jet->pt());
     m_jetE->push_back(jet->e());
     m_jetWidth->push_back(jet->getAttribute<float>("Width"));
-    m_jetMass->push_back(jet->m()); //DOES THIS NEED TO BE CONVERTED?
+    m_jetMass->push_back(jet->m());
     m_jetCount->push_back (counter_jet); //To control constituent-jet matching.
 
     //Truth information.
@@ -347,22 +350,31 @@ StatusCode MyxAODAnalysis :: execute ()
     m_jetNumTrkPt1000->push_back(jet->getAttribute<std::vector<int>>("NumTrkPt1000").at(pvIndex));
 
     m_jetSumTrkPt500->push_back((jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex)));
+    float SumTrkPt500_vector_at_pv = jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex);
+    std::vector<float> SumTrkPt500_vector = jet->getAttribute<std::vector<float>>("SumPtTrkPt500");
+    int isNotPV = 0;
+    for (float item: SumTrkPt500_vector){
+        if (item > SumTrkPt500_vector_at_pv){
+            isNotPV = 1;
+            break;
+        }
+    }
+    isNotPVJet->push_back(isNotPV);
+    
+    // Following version missing in the derivation
     //m_jetSumTrkPt1000->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt1000").at(pvIndex));
-
+    
     //No track width in this derivation? Try another?
     m_jetTrackWidthPt1000->push_back(jet->getAttribute<std::vector<float>>("TrackWidthPt1000"));
 
-    //Debug string for jet track constituent variables, run in debug or change to INFO
-    //(can I just access the last pushback?).
-    //TODO: FIX THE UNITS AND BE CONSISTENT.
-    ANA_MSG_INFO("Jet: " << counter_jet << " with pT: " << (jet->pt())
+    /*ANA_MSG_INFO("Jet: " << counter_jet << " with pT: " << (jet->pt())
                          << " has nTrack(500): " 
                          << jet->getAttribute<std::vector<int>>("NumTrkPt500").at(pvIndex)
                          << ", nTrack(1000): " 
                          << jet->getAttribute<std::vector<int>>("NumTrkPt1000").at(pvIndex)                         
                          << ", track sum Pt(500): "
                          << (jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex)));
-
+    */
     /////////////////////////////////////////
     //
     // Jet Contituents.
@@ -436,6 +448,7 @@ MyxAODAnalysis::~MyxAODAnalysis(){
   delete m_jetE;
   delete m_jetWidth;
   
+  delete isNotPVJet;
   delete isBadJet;
   delete isBaselineJet;
   delete isSignalJet;
