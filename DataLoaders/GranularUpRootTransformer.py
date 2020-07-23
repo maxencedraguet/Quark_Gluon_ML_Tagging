@@ -39,10 +39,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 
 import math
+import random
 import numpy as np
 import pandas as pd
-pd.set_option('display.max_rows', 5)
-pd.set_option('display.max_colwidth', -1)
 import uproot as upr
 from pyjet import cluster
 from pyjet.utils import ptepm2ep
@@ -67,7 +66,7 @@ class GranularUpRootTransformer(ABC):
     def extract_parameters(self, config: Dict)->None:
         # In this case it should be the path to a text file, with all directories to load.
         self.data_file = config.get(["absolute_data_path"]) # does not matter right now.
-        
+
         self.path = config.get(["GranularUpRootTransformer", "save_path"])
         self.save_tables_bool = config.get(["GranularUpRootTransformer", "save_tables"])
         self.save_csv_bool = config.get(["GranularUpRootTransformer", "to_CSV"])
@@ -78,18 +77,25 @@ class GranularUpRootTransformer(ABC):
         self.save_JUNIPR_transform_bool = config.get(["GranularUpRootTransformer", "save_JUNIPR_transform"])
         self.JUNIPR_cluster_algo= config.get(["GranularUpRootTransformer", "JUNIPR_cluster_algo"])
         self.JUNIPR_cluster_radius= config.get(["GranularUpRootTransformer", "JUNIPR_cluster_radius"])
-
+        
+        self.cut_train_test= config.get(["GranularUpRootTransformer", "cut_train_test"])
+        self.test_size = config.get(["GranularUpRootTransformer", "test_size"])
+        
+        """
         add_to_path = ""
         if self.clean_jets_bool:
-            add_to_path = "cut_"
+            add_to_path = "tri_cut_"
+        """
         self.save_path_junipr = os.path.join(self.path, 'junipr/')
         self.save_path_csv = os.path.join(self.path, 'CSV/')
         self.save_path_hf = os.path.join(self.path, 'HF/')
-        self.diagnostic_path = os.path.join(self.path, add_to_path+'Diagnostic/')
+        self.diagnostic_path = os.path.join(self.path, 'Diagnostic/')
         
         self.seed = config.get(["seed"])
+        random.seed(self.seed)
+        
         self.diagnostic_bool = config.get(["diagnostic"])
-
+    
     def get_inputs_list(self)->None:
         """
         Given a file with a list of target root file (only those uncommented).
@@ -103,6 +109,7 @@ class GranularUpRootTransformer(ABC):
                 dir_path = dir_path.rstrip('\n')
                 if not dir_path.startswith("#"):
                     self.inputs_list += [dir_path]
+                    print (dir_path)
 
     def make_df(self, input_file, tree_name, branches):
         """
@@ -130,11 +137,6 @@ class GranularUpRootTransformer(ABC):
         """
         c_pdf = constituent_pdf.copy(deep = True)
         j_pdf = jet_pdf.copy(deep = True)
-        # Translate MeV distributions into GeV ones
-        for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_constituent:
-            c_pdf[var] =  c_pdf[var].div(1000)
-        for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_jet:
-            j_pdf[var] =  j_pdf[var].div(1000)
         
         # Small check: no constituent should have a negative energy. If this happens, drop these constituents
         if (any(c_pdf['constituentE']) < 0):
@@ -168,7 +170,8 @@ class GranularUpRootTransformer(ABC):
         
         print("Initial shape jet ", j_pdf.shape)
         if self.clean_jets_bool:
-            drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] < 20)  |
+            drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] < 20)       |
+                                         (j_pdf['isNotPVJet'] == 1)  |      # This means your jet is not at the primary vertex (it's on another vertex)
                                          (j_pdf['jetNumberConstituent'] <= 4)].index
             j_pdf.drop(drop_bad_jet_indices, inplace=True)
         j_pdf_small = j_pdf[['entry', 'subentry', 'isTruthQuark']]
@@ -205,13 +208,28 @@ class GranularUpRootTransformer(ABC):
             constituent_pdf.reset_index(inplace=True)
             jet_pdf.reset_index(inplace=True)
             
+            # Translate MeV distributions into GeV ones
+            for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_constituent:
+                constituent_pdf[var] =  constituent_pdf[var].div(1000)
+            for var in Specific_Set4_Parameters.vars_convert_MeV_to_GeV_jet:
+                jet_pdf[var] =  jet_pdf[var].div(1000)
+            
+            if self.diagnostic_bool:
+                # These happen before cleaning
+                self.diagnostic_plots(constituent_pdf, file_name, ['constituentE'], additional_text = "_Before_cuts")
+                self.diagnostic_plots(jet_pdf, file_name, ['isNotPVJet', 'isTruthQuark', 'jetSumTrkPt500', 'jetNumTrkPt500'], additional_text = "_Before_cuts")
+                # Some constituent to jet comparison
+            
             constituent_pdf, jet_pdf = self.event_cleaning(constituent_pdf, jet_pdf)
             
             if self.save_tables_bool:
                 if self.save_csv_bool:
-                    self.save_to_csv(constituent_pdf, file_name)
+                    self.save_to_csv(constituent_pdf, file_name+"_constituents")
+                    self.save_to_csv(jet_pdf, file_name+"_jets")
+                
                 if self.save_hdf_bool:
-                    self.save_to_h5(constituent_pdf, file_name)
+                    self.save_to_h5(constituent_pdf, file_name+"_constituents")
+                    self.save_to_h5(jet_pdf, file_name+"_jets")
         
             if self.diagnostic_bool:
                 self.diagnostic_plots(constituent_pdf, file_name, constituent_vars)
@@ -224,7 +242,16 @@ class GranularUpRootTransformer(ABC):
                 dictionnary_result = perform_clustering(self.JUNIPR_cluster_algo, self.JUNIPR_cluster_radius, jet_pdf, constituent_pdf)
                 print("Time for jet clustering to JUNIPR {}".format(time.process_time() - start))
                 if self.save_JUNIPR_transform_bool:
-                    self.save_junipr_data_to_json(dictionnary_result, file_name)
+                    if self.cut_train_test:
+                        random.shuffle(dictionnary_result)
+                        size_of_data_test = int(len(dictionnary_result) * self.test_size)
+                        dictionnary_result_train = dictionnary_result[size_of_data_test:]
+                        dictionnary_result_test  = dictionnary_result[:size_of_data_test]
+                        
+                        self.save_junipr_data_to_json(dictionnary_result_train, file_name+"_train")
+                        self.save_junipr_data_to_json(dictionnary_result_test, file_name+"_test")
+                    else:
+                        self.save_junipr_data_to_json(dictionnary_result, file_name)
             
         warnings.filters = original_warnings
 
@@ -252,7 +279,7 @@ class GranularUpRootTransformer(ABC):
         with open( os.path.join(self.save_path_junipr, file_name + '.json'), "w") as write_file:
             json.dump(dictionnary, write_file) #, indent=4)
 
-    def diagnostic_plots(self, df, file_name, vars):
+    def diagnostic_plots(self, df, file_name, vars, additional_text = ""):
         """
         Performs some diagnostic plots and store them in self.diagnostic_path.
         """
@@ -269,13 +296,14 @@ class GranularUpRootTransformer(ABC):
                     bins = Specific_Set4_Parameters.plot_xbins[plot_name],
                     range = Specific_Set4_Parameters.plot_xranges[plot_name],
                     ax = ax)
+            ax.text(0.7, 0.7, additional_text.replace("_", " "), fontsize=10,  horizontalalignment='center', verticalalignment='center', transform = ax.transAxes)
             ax.set_title(plot_name)
             ax.set_xlabel(Specific_Set4_Parameters.plot_xlabels[plot_name])
             ax.set_ylabel('Events')
-            fig.savefig(os.path.join(local_path, plot_name + '.png'), dpi=300, format='png', bbox_inches='tight')
+            fig.savefig(os.path.join(local_path, plot_name + additional_text + '.png'), dpi=300, format='png', bbox_inches='tight')
             if plot_name in Specific_Set4_Parameters.log_hist:
                 ax.set_yscale('log')
-                fig.savefig(os.path.join(local_path, plot_name + '_log.png'), dpi=300, format='png', bbox_inches='tight')
+                fig.savefig(os.path.join(local_path, plot_name + additional_text + '_log.png'), dpi=300, format='png', bbox_inches='tight')
             plt.close()
 
     def compare_dataset_info(self, jet_pdf, constituent_pdf, file_name):

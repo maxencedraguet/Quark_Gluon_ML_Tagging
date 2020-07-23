@@ -80,7 +80,9 @@ class JuniprDataset(Dataset):
         n_branchings     = targeted_jet["n_branchings"]
         seed_momentum    = torch.FloatTensor(targeted_jet["seed_momentum"])
         # return a tensor of size number_of_jets*size of a list
-        #CSJets           = torch.FloatTensor(targeted_jet["CSJets"])
+        CSJets           = torch.FloatTensor(targeted_jet["CSJets"])
+        CS_ID_mothers    = torch.IntTensor(targeted_jet["CS_ID_mothers"])
+        CS_ID_daugthers  = torch.IntTensor([[d[0], d[1]] for d in targeted_jet["CS_ID_daugthers"]])
         # return a tensor of size number_of_branching*size of a branching
         ending = torch.IntTensor()
         mother_id_energy = torch.IntTensor(targeted_jet["mother_id_energy_order"])
@@ -96,8 +98,11 @@ class JuniprDataset(Dataset):
                 "seed_momentum": seed_momentum,
                 "ending": ending,
                 "mother_id_energy": mother_id_energy,
-                #"CSJets": CSJets,
+                "CSJets": CSJets,
+                "CS_ID_mothers": CS_ID_mothers,
+                "CS_ID_daugthers": CS_ID_daugthers,
                 "branching": branching,
+                "unscaled_branching": branching,
                 "mother_momenta": mother_momenta,
                 "daughter_momenta": daughter_momenta
                 }
@@ -122,14 +127,27 @@ class PadTensors(object):
     def __call__(self, sample):
         branching, mother_id_energy = sample["branching"], sample["mother_id_energy"]
         mother_momenta, daughter_momenta = sample["mother_momenta"], sample["daughter_momenta"]
+        CSJets = sample["CSJets"]
+        CS_ID_mothers = sample["CS_ID_mothers"]
+        CS_ID_daugthers = sample["CS_ID_daugthers"]
+        unscaled_branching = sample["unscaled_branching"]
         
         padded_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
+        padded_unscaled_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
         padded_mother_momenta = np.ones((self.default_size, mother_momenta.size()[-1])) * self.pad_token
         padded_daughter_momenta = np.ones((self.default_size, daughter_momenta.size()[-1])) * self.pad_token
+        padded_CS_jet = np.ones((self.default_size*2, CSJets.size()[-1])) * self.pad_token
+        padded_CS_ID_mothers = np.ones((self.default_size)) * self.pad_token
+        padded_CS_ID_daugthers = np.ones((self.default_size, CS_ID_daugthers.size()[-1])) * self.pad_token
 
         padded_branching[:branching.size()[0], :] = branching
+        padded_unscaled_branching[:branching.size()[0], :] = unscaled_branching
         padded_mother_momenta[:mother_momenta.size()[0], :] = mother_momenta
         padded_daughter_momenta[:daughter_momenta.size()[0], :] = daughter_momenta
+        
+        padded_CS_jet[:CSJets.size()[0], :] = CSJets
+        padded_CS_ID_mothers[:CS_ID_mothers.size()[0]] = CS_ID_mothers
+        padded_CS_ID_daugthers[:CS_ID_daugthers.size()[0], :] = CS_ID_daugthers
         
         # Case of mother_id_energy: particular
         #   - has to be padded to self.output_size * self.output_size (first for recurrence, second for possible mothers)
@@ -161,8 +179,11 @@ class PadTensors(object):
                  "seed_momentum": sample["seed_momentum"],
                  "ending": torch.FloatTensor(ending_val),
                  "mother_id_energy": torch.IntTensor(padded_mother_id),
-                 #"CSJets": sample["CSJets"],
+                 "CSJets": torch.FloatTensor(padded_CS_jet),
+                 "CS_ID_mothers": torch.IntTensor(padded_CS_ID_mothers),
+                 "CS_ID_daugthers":  torch.IntTensor(padded_CS_ID_daugthers),
                  "branching": torch.FloatTensor(padded_branching),
+                 "unscaled_branching": torch.FloatTensor(padded_unscaled_branching),
                  "mother_momenta": torch.FloatTensor(padded_mother_momenta),
                  "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
                 }
@@ -252,8 +273,11 @@ class FeatureScaling(object):
                  "seed_momentum": seed_momentum,
                  "ending": sample["ending"],
                  "mother_id_energy": sample["mother_id_energy"],
-                 #"CSJets": sample["CSJets"],
+                 "CSJets": sample["CSJets"],
+                 "CS_ID_mothers": sample["CS_ID_mothers"],
+                 "CS_ID_daugthers": sample["CS_ID_daugthers"],
                  "branching": branching,
+                 "unscaled_branching": sample["unscaled_branching"],
                  "mother_momenta": mother_momenta,
                  "daughter_momenta": daughter_momenta
                 }
@@ -287,8 +311,11 @@ class GranulariseBranchings(object):
                 "seed_momentum": sample["seed_momentum"],
                 "mother_id_energy": sample["mother_id_energy"],
                 "ending": sample["ending"],
-                #"CSJets": sample["CSJets"],
+                "CSJets": sample["CSJets"],
+                "CS_ID_mothers": sample["CS_ID_mothers"],
+                "CS_ID_daugthers": sample["CS_ID_daugthers"],
                 "branching": branching_dis,
+                "unscaled_branching": sample["unscaled_branching"],
                 "mother_momenta": sample["mother_momenta"],
                 "daughter_momenta": sample["daughter_momenta"]
                }

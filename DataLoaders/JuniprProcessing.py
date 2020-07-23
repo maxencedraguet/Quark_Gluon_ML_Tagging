@@ -14,8 +14,6 @@
 import math
 import numpy as np
 import pandas as pd
-pd.set_option('display.max_rows', 5)
-pd.set_option('display.max_colwidth', -1)
 from pyjet import cluster
 from pyjet.utils import ptepm2ep
 from tqdm.auto import tqdm
