@@ -55,7 +55,6 @@ class JuniprNetwork(_BaseNetwork):
         #thing = NeuralNetwork(source = "RecurrentInit", config=config)
         #self.seed_momenta_to_hidden_network =
         self.seed_momenta_to_hidden_network = NeuralNetwork(source = "RecurrentInit", config=config)
-        self.RNN_needs_initialisation = True
         # We can then initiate the Recurrent Network (it's first hidden state will be the ouput of self.seed_momenta_to_hidden_network
         self.recurrent_network = RecurrentNetwork(config=config)
         
@@ -94,12 +93,12 @@ class JuniprNetwork(_BaseNetwork):
         #print("In junipr network, size of daughters_momenta: {}".format(daughters_momenta.size()))
         daughters_momenta_PACK = rnn.pack_padded_sequence(daughters_momenta, n_branching, batch_first=True, enforce_sorted = False)
         # As a weird effect of interleaving the tensor entries (batch_sample1, batch_sample2, ... batch_sampleX, and again)
-        if self.RNN_needs_initialisation:
-            previous_hidden_states = self.seed_momenta_to_hidden_network(seed_momenta)
-            self.RNN_needs_initialisation = False
-            # Needs a dimension tweak
-            previous_hidden_states = previous_hidden_states[None, :, :]
-            #print("In junipr network, size of previous_hidden_states: {}".format(previous_hidden_states.size()))
+        
+        previous_hidden_states = self.seed_momenta_to_hidden_network(seed_momenta)
+        # Needs a dimension tweak
+        previous_hidden_states = previous_hidden_states[None, :, :]
+        #print("In junipr network, size of previous_hidden_states: {}".format(previous_hidden_states.size()))
+
         hidden_states, last_hiddens = self.recurrent_network(daughters_momenta_PACK, previous_hidden_states)
         #print("\nIn junipr network, hidden output: {}\n".format(hidden_states))
         #print("In junipr network, last hidden output: {}".format(last_hiddens.size()))

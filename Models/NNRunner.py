@@ -146,13 +146,13 @@ class NNRunner(_BaseRunner):
                 
                 if (step_count% self.test_frequency == 0):
                     print("Training {} step | loss =  {} and accuracy = {}".format(step_count, float(output_loss), float(output_acc)))
-                    self.test_loop(epoch=epoch, step=step_count)
+                    self.test_loop(step=step_count)
                     self.network.train()
                     
             print("Training {} epochs | loss =  {} and accuracy = {}".format(epoch, float(epoch_loss/len(self.train_dataloader)), float(epoch_acc/len(self.train_dataloader))))
         
 
-    def test_loop(self, epoch:int, step:int):
+    def test_loop(self, step:int):
         print("Start testing loop")
         self.network.eval()
         y_pred_proba_list = []
@@ -174,7 +174,30 @@ class NNRunner(_BaseRunner):
             print("testing {} step | loss =  {} and accuracy = {}".format(step, float(mean_loss), float(mean_accuracy)))
             self.writer.add_scalar("test_loss", float(mean_loss),     step)
             self.writer.add_scalar("test_acc",  float(mean_accuracy), step)
-    
+
+    def log_confusion_matrix(epoch, logs):
+        """
+        A confusion matrix logger to tensorboard
+        """
+        # Use the model to predict the values from the validation dataset.
+        test_pred_raw = model.predict(test_images)
+        test_pred = np.argmax(test_pred_raw, axis=1)
+
+        # Calculate the confusion matrix.
+        cm = sklearn.metrics.confusion_matrix(test_labels, test_pred)
+        # Log the confusion matrix as an image summary.
+        figure = plot_confusion_matrix(cm, class_names=class_names)
+        cm_image = plot_to_image(figure)
+        
+        # Log the confusion matrix as an image summary.
+        with file_writer_cm.as_default():
+            tf.summary.image("Confusion Matrix", cm_image, step=epoch)
+
+        # Define the per-epoch callback.
+        cm_callback = keras.callbacks.LambdaCallback(on_epoch_end=log_confusion_matrix)
+
+
+
     def test(self):
         self.network.eval()
         y_pred_proba_list = []
