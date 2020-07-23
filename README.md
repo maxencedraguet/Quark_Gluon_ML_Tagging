@@ -2,50 +2,49 @@
 ## Meetings
 ### Recent progress: 
 
-* Finished implementing the JUNIPR network:
-    * The data can now pass through all components in batch form (this is preferable to one-event at a time for optimality reasons). Sole weakness: computing the loss. This is due to each event having a different sequence length (a sequence in this case is the number of node in the tree, each node being fed to the recurrent network sequentially). For the loss module, the computed value therefore have to be restrained to the real sequence length and not the padded one. If, in testing time, the implementation proves too slow, I could explore a batch-friendly implementation of the loss (using mask on indices matching padded values as observed from the target info).
-    
-    <p float="center">
-    <img src="Readme_Result/junipr_structure.png" width="800" />
-    </p>
+* Concerning data: I now have access to both quark and gluon data of the same distributions (DAOD_JETM6). Both sets have passed the first processing step (Athena Algortihm) and are being translated into Junipr Jets. This takes some time given how large they are (processing the 916,786 gluon jets is expected to take close to 13 hours for example) and given (for some reason) HTCondor is far less efficient in data transfer than simply using the pplxint. I will be running on this data has it has quark (with ttbar) and gluon (with dijet) samples of comparable information. In particular, it has similar sort of jets and the same r and e tags. 
 
-    * Modified slightly the structure compared to last week. In particular: 
-        * no need for one-hot encoding of branching info. Instead, each bin is now seen as a class and the cross-entropy naturally implements the probability reduction.
-        * no need for data input on end sequence (0 for going on, 1 for stopping). This is directly deduced from the number of branching (this reduces the size of batch)
-        * implemented 2 factorisations of branching:
-        * a first one sees the branching  network as a single MLP going to 4 * <i>granularity</i> (z, t, p and d deduced from single MLP) with input info being hidden + mother momenta
-        * a second one sees the branching network as 4 MLP's. A first one outputs <i>granularity</i> values to deduce z from hidden + mother momenta. Another networks outputs t (<i>granularity</i> outputs) using hidden + mother momenta + <b>z info (from input)</b>. Similarly, for d using hidden + mother momenta + <b>z  + t info from inputs</b> and for p using hidden + mother momenta + <b>z + t  +d info from inputs</b>
-
-* Currently running the different data processing programs on samples of DAOD_JETM6 and DAOD_JETM8. The M6 have ttbar info and M8 have the dijet and Z+jet. A minor issue oberved is that M8 does not have the sort of jet I'm currently using ("AntiKt4EMTopoJets") and the only common ones with M6 are "AntiKt4EMPFlowJets" and "AntiKt4TruthJets". Options are either to change to sort of jet studied (so that data is processed similarly for each label and spurious differences are introduced) or gather data from different distributions (such as M7). Note that M6 is currently being modified so not all data files were accessible previously (this seems to be the origin of the failure of the grid processing). The issue migth have been solved in the meantime. I'll see with Aaron what we can get. 
-    
-    * Yesterday I finished processing another ttbar file from the DAOD_JETM8 family. It showed something strange in the jet variables (after cuts removing jet with pT < 20 GeV and less than 5 constituents). Below is a histogram of the number of track with a pT of at least 500 (left) and 1000 (right) for each jet (NumTrkPt500 and NumTrkPt1000). 
-    
-    <p float="center">
-    <img src="Readme_Result/Diag_cut/jetNumTrkPt500.png" width="350" />
-    <img src="Readme_Result/Diag_cut/jetNumTrkPt1000.png" width="350" />
-    </p>
-        
-    * And following is a histogram of jet with  a summed of track pT of at least 500 (SumTrkPt500).
-    
-    <p float="center">
-    <img src="Readme_Result/Diag_cut/jetSumTrkPt500.png" width="350" />
-    </p>
-    
-    * These variable seem to suggest a strange peak at 0. I have no idea if this is to be expected or should be removed.
-    
-* Next steps:
-    * implementing a way to visualise the probability on a tree structure (as done in Junipr paper),
-    * training the model on large datasets (in progress, seems to work fine for the moment),
-    * optimising the structure,
-    * train on same dataset the BDT and NN,
-    * compare models
-    * possibly: quickly go through the steps of a particle flow network (simpler to implement, it takes the final constituents as an unordered list and output a graph with a complex convolution operations implemented through NN's). This model was also shown to be state of the art for a different jet task. 
-
-* Note: I still have an annoying issue with the scaling of data. Since jets here are not restrained to an energy-radius window, the data lacks a natural scaling. I implemented somethign supposedly quite general to bring most of the data into the range [0, 1]. This works well for most data but about 4% of branchings fall out of the window and are therefore trimmed to 0 or 1. This is not dramatic since later on the branching data is discretised into 10 (for now) bins so in any case it would fall in their assigned bins. I am however afraid that this might blur out some information. The scaling functions are (for now too) taken directly from Junipr: 
+* Concerning the strange peaks observed last week in  SumTrkPt500 and NumTrkPt500, I added the cut you suggested (removing jets that have a SumTrckPt500 at the PV_index inferior to some SumTrckPt500 at some other indice). The modification observed on the data is as follows for SumTrkPt500 (left is before any cuts, right is after all cuts).
 
 <p float="center">
-<img src="Readme_Result/equations_of_scaling.png" width="250" />
+<img src="Readme_Result/jetSumTrkPt500_Before_cuts.png" width="350" />
+<img src="Readme_Result/jetSumTrkPt500.png" width="350" />
 </p>
+
+* And for NumTrkPt500:
+
+<p float="center">
+<img src="Readme_Result/jetNumTrkPt500_Before_cuts.png" width="350" />
+<img src="Readme_Result/jetNumTrkPt500.png" width="350" />
+</p>
+
+* I have finished training two Junipr models on quark (previous datasets). One before the added cut on SumPtTrack500 (that we discussed last week to remove spurious peak) and one with (I refer to this further cut dataset as tri_cut). To visualise the result, I implemented a tree drawer that shows each branching. Values at nodes are the computed probabilities by the junipr model, obtained by the product of:
+    * probability that the tree does (not) end at that node,
+    * probability that at that step the particle decaying is this one among those available,
+    * probability that out of that decay, the two daughters emerging have the parameters observed (given the mother)
+    * The product of this probabilities fully describes the probability of a decay (of a node). Hence, the product of node probabilities (times the probability of the tree ending where it ends) is the probability of observing this jet (conditionned on the model learnt, a.k.a. quark or gluon jet). This <b>probability can be visualise on the tree by the values indicated at each node</b> (each time, the product of the tree components, the <b>value displayed is in fact - log(proba)</b>), with the <b>colour of edges representing the energy </b> (in log scale!). The angles used for the tree are not exactly the physical ones (since these are 3D) but the angles of branchings (and not the actual angles) all brought into the same plane (this can give the false appearance of momentum imbalance). The general orientation of a particle is taken with respect to the seed momenta =  the very first original mother (on a 3D sphere, the seed momenta would be axis z; any particle living in the right hemisphere - phi angle between 0 and pi - would be perceived as going up on the tree, while those on the left hemisphere would go down). 
+    * Examples of trees with probabilities learnt by a Junipr Quark model for 50 epochs (batch-size 200, learning rate 1E-3). Left are quark jets and right are gluon jets (all from a ttbar dataset, made of EMTopoCluster jets):
+
+<p float="center">
+<img src="Readme_Result/jet_88.png" width="350" />
+<img src="Readme_Result/jet_12.png" width="350" />
+</p>
+
+<p float="center">
+<img src="Readme_Result/jet_4.png" width="350" />
+<img src="Readme_Result/jet_6.png" width="350" />
+</p>
+
+* Note that the difference between an anti-kT and CA jet is now quite apparent. This is the same jet clustered using different techniques (left is anti-kT, right CA - note that the probability attached to nodes are utterly meaningless here: the model was not trained):
+
+<p float="center">
+<img src="Readme_Result/CAvsKT/2kt.png" width="350" />
+<img src="Readme_Result/CAvsKT/2ca.png" width="350" />
+</p>
+
+* There is clearly a lot more to store in the hidden state for the anti-kT case given that the global structure is decomposed sequentially while CA jets have a global structure developping in parallel, with each major branch having ramifications . Note that particles have very different orientations between one tree and the other. This is due to the use of local branching angles instead of true angles (each edge is orientated with respect to the previous one, with a modified angle coming from branching info).
+
+* I also implemented the binary version of junipr. Indeed, the "unary" version is not fit to discriminate (given the probability of a jet is conditional on its size too). To go for this, I will pre-train a quark and gluon model on, respectively, quark- and gluon-rich dataset. I will then load both models and run them on a balance quark-gluon jet dataset (to do this, the truth label will be used and any jet with label -1 will receive the label dominating in the dataset it comes from). The objective function will be to maximise the ratio <i> probability_quark /  probability_gluon</i> for quark truth jet and maximise the inverse for gluon jets. To make this more palatable for backwards propagation, the objective will in fact be sigmoid[- log(probability_quark) + log(probability_gluon)] to <b>minimise</b> for quark jets and sigmoid[log(probability_quark) - log(probability_gluon)] to minisme for gluon jets. This should soften the differentiation steps. Based on this likelihood ration, I will then be able to predict a label simply by considering probability_quark /  probability_gluon. A threshold will have to be decided (based on ROC curves) and any value above the threshold will be taken to be a quark jet (below the threshold, a gluon jet).
 
 
 
