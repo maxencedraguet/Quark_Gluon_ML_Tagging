@@ -55,12 +55,13 @@
             * Training 1700 step | batch loss :  -6,280.829 | accuracy : 0.605
             * Training 1750 step | batch loss : -12,999.625 | accuracy : 0.655
               
-        * Validation 1500 step |  loss = -1,285,013.87 |  accuracy = 0.6047170597549796
-        * Validation 1550 step |  loss = -1,324,978.75 |  accuracy = 0.6035086257188099
-        * Validation 1600 step |  loss = -1,277,915.87 |  accuracy = 0.6032586048837403
-        * Validation 1650 step |  loss = -1,460,842.75 |  accuracy = 0.5960080006667222
-        * Validation 1700 step |  loss = -1,521,012.62 |  accuracy = 0.6046753896158014
-        * Validation 1750 step |  loss = -1,614,105.25 |  accuracy = 0.6056754729560797
+            * Validation 1500 step |  loss = -1,285,013.87 |  accuracy = 0.6047170597549796
+            * Validation 1550 step |  loss = -1,324,978.75 |  accuracy = 0.6035086257188099
+            * Validation 1600 step |  loss = -1,277,915.87 |  accuracy = 0.6032586048837403
+            * Validation 1650 step |  loss = -1,460,842.75 |  accuracy = 0.5960080006667222
+            * Validation 1700 step |  loss = -1,521,012.62 |  accuracy = 0.6046753896158014
+            * Validation 1750 step |  loss = -1,614,105.25 |  accuracy = 0.6056754729560797
+            
     * The one <b>with</b> sigmoid: the optimisation push makes the value go down (the value is now limited between 0 and 1). What follow is the same batch shown at the start and after one epoch (same batch as above in fact):
         * Training epoch 0 | batch loss : 0.47359 | accuracy : 0.525
         * Training epoch 1| batch loss : 0.45004| accuracy : 0.55
