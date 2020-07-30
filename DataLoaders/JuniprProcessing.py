@@ -187,6 +187,9 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
     for filou, elem in enumerate(column_data):
         #print("\n JET {}\n".format(filou))
         # Initiate the information required for a jet:
+        if (filou % 10000 == 0):
+            print("Turned about {} events into Junipr Jets".format(filou))
+        
         label = label_data[filou]
         multiplicity = len(elem)
         n_branchings = multiplicity - 1
@@ -259,11 +262,21 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
         particles_step = particles_available.copy() # tracks available daughter at step that haven't yet been matched to a mother
         number_branching = 0
         location_First_None = multiplicity #the first avilable value in CSJet (the one after the final state particles).
+        
+        cataclysm_bool = False # set to true if you see something fishy. One of the error observed is that the output of elem.child is nonetype.
+        # If this happens, just get rid of everything.
         while (number_branching < n_branchings):
             next_particles_step = list()
             observed_candidate_mothers = []
             for elem in particles_step:
                 mother_part = elem.child #remember the note from function definition: PyJet child is in fact the mother.
+                if mother_part is None:
+                    # this is a cataclysmic event: makes no sense to consider a particle with no mother here. The only one that it could be is the top mother but it shouldn't be in the loop.
+                    # This is very rare so get rid of it
+                    cataclysm_bool = True
+                if cataclysm_bool:
+                    last_elem = elem
+                    break
                 if mother_part in observed_candidate_mothers:
                     # Mother has already been observed (you stumbled upon the second daughter)
                     continue
@@ -278,7 +291,8 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
                     deltaR2 = (daughter1.eta - daughter2.eta)**2 + (daughter1.phi - daughter2.phi)**2
                     possible_mothers.append((deltaR2, mother_part))
                     observed_candidate_mothers.append(mother_part)
-
+            if cataclysm_bool:
+                break
             # Select the mother in the branching where deltaR**2 is minimised between components
             # Important: note that is also works for anti-kT as there will be only one possible mother (since a core particle gets all soft radiations added to it).
             min_deltaR2, selected_mother = min(possible_mothers)
@@ -310,7 +324,10 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
                 
             #print("N_branching currently = {}, total = {}".format(number_branching, n_branchings))
         # End of "while"
-        
+        if cataclysm_bool:
+            print("A cataclysmic error occured: at some point, a mother was None. It is the mother of {}, for a jet starting with {}.".format(last_elem, jet))
+            # Terrible error occured: a Nonetype mother. Strange error that seems very rare. Just discard the whole event
+            continue
         # Reverse the list created along the above iteration.
         # This is required has the iteration was bottom-up (starting with final state particles, go back to mother one) while JUNIPR starts with top-mother
         CS_ID_intermediate_states.reverse()

@@ -16,6 +16,8 @@
 # 'jetNumTrkPt500', 'jetNumTrkPt1000', 'jetTrackWidthPt500', 'jetTrackWidthPt1000', 'jetSumTrkPt500',
 # 'jetSumTrkPt1000', 'partonIDs', 'BDTScore', 'isTruthQuark', 'isBDTQuark', 'isnTrkQuark']
 #
+#jetPt, jetEta, jetPhi, jetMass, jetEnergy, jetEMFrac, jetHECFrac, jetChFrac, jetNumTrkPt500, jetNumTrkPt1000, jetTrackWidthPt500, jetTrackWidthPt1000, jetSumTrkPt500, jetSumTrkPt1000
+#
 #############################################################################
 import os
 import sys

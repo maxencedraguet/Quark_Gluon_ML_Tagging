@@ -243,10 +243,15 @@ class GranularUpRootTransformer(ABC):
                 print("Time for jet clustering to JUNIPR {}".format(time.process_time() - start))
                 if self.save_JUNIPR_transform_bool:
                     if self.cut_train_test:
-                        random.shuffle(dictionnary_result)
-                        size_of_data_test = int(len(dictionnary_result) * self.test_size)
-                        dictionnary_result_train = dictionnary_result[size_of_data_test:]
-                        dictionnary_result_test  = dictionnary_result[:size_of_data_test]
+                        list_of_jets = dictionnary_result["JuniprJets"]
+                        random.shuffle(list_of_jets)
+                        size_of_data_test = int(len(list_of_jets) * self.test_size)
+                        #print("size_of_data_test = ", size_of_data_test)
+                        #print("Type of dictionnary_result ", type(dictionnary_result))
+                        list_train = list_of_jets[size_of_data_test:]
+                        list_test  = list_of_jets[:size_of_data_test]
+                        dictionnary_result_train = {"JuniprJets": list_train}
+                        dictionnary_result_test  = {"JuniprJets": list_test}
                         
                         self.save_junipr_data_to_json(dictionnary_result_train, file_name+"_train")
                         self.save_junipr_data_to_json(dictionnary_result_test, file_name+"_test")

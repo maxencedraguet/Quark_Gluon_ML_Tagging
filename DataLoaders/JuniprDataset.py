@@ -46,7 +46,7 @@ class JuniprDataset(Dataset):
     granularity is the size of the binning of branching info into x (variables are forced to take values between 0 and 1). This is followed by one-hot encoding.
     """
     
-    def __init__(self, json_file, transform):#config: Dict):
+    def __init__(self, json_file, train_bool, transform):#config: Dict):
         """
         Receives the json_file with the data to process as well as the root directory
         Transform is an option to be applied to samples (to scale, pad and modify them).
@@ -58,6 +58,7 @@ class JuniprDataset(Dataset):
             self.data_array = json.load(json_file)['JuniprJets'] #a list of dictionnaries
         self.data_size = len(self.data_array)
         #self.transform = config.get(["JuniprDataset", "transform"])
+        self.train_bool = train_bool
         self.transform = transform
         #self.padding_to_size =config.get(["JuniprDataset", "pad_to_size"]) #
         
@@ -76,36 +77,46 @@ class JuniprDataset(Dataset):
         targeted_jet = self.data_array[idx] #returns the associated dictionnary
         #.... do something to get samples from the jet dictionary
         label            = targeted_jet["label"]
-        multiplicity     = targeted_jet["multiplicity"]
+        #multiplicity     = targeted_jet["multiplicity"]
         n_branchings     = targeted_jet["n_branchings"]
         seed_momentum    = torch.FloatTensor(targeted_jet["seed_momentum"])
         # return a tensor of size number_of_jets*size of a list
-        CSJets           = torch.FloatTensor(targeted_jet["CSJets"])
-        CS_ID_mothers    = torch.IntTensor(targeted_jet["CS_ID_mothers"])
-        CS_ID_daugthers  = torch.IntTensor([[d[0], d[1]] for d in targeted_jet["CS_ID_daugthers"]])
-        # return a tensor of size number_of_branching*size of a branching
-        ending = torch.IntTensor()
+        if not(self.train_bool):
+            CSJets           = torch.FloatTensor(targeted_jet["CSJets"])
+            CS_ID_mothers    = torch.IntTensor(targeted_jet["CS_ID_mothers"])
+            CS_ID_daugthers  = torch.IntTensor([[d[0], d[1]] for d in targeted_jet["CS_ID_daugthers"]])
         mother_id_energy = torch.IntTensor(targeted_jet["mother_id_energy_order"])
         branching        = torch.FloatTensor(targeted_jet["branching"])
         mother_momenta   = torch.FloatTensor(targeted_jet["mother_momenta"])
         # return a tensor of size number_of_branching* 2 * size of a branching
         daughter_momenta = torch.FloatTensor([np.concatenate([d[0], d[1]]) for d in targeted_jet["daughter_momenta"]])
-        
-        sample = {
-                "label": label,
-                "multiplicity": multiplicity,
-                "n_branchings": n_branchings,
-                "seed_momentum": seed_momentum,
-                "ending": ending,
-                "mother_id_energy": mother_id_energy,
-                "CSJets": CSJets,
-                "CS_ID_mothers": CS_ID_mothers,
-                "CS_ID_daugthers": CS_ID_daugthers,
-                "branching": branching,
-                "unscaled_branching": branching,
-                "mother_momenta": mother_momenta,
-                "daughter_momenta": daughter_momenta
-                }
+
+        if self.train_bool:
+            sample = {
+                      "label": label,
+                      "n_branchings": n_branchings,
+                      "seed_momentum": seed_momentum,
+                      "mother_id_energy": mother_id_energy,
+                      "branching": branching,
+                      "mother_momenta": mother_momenta,
+                      "daughter_momenta": daughter_momenta
+                    }
+    
+
+        else:
+            sample = {
+                    "label": label,
+                    "n_branchings": n_branchings,
+                    "seed_momentum": seed_momentum,
+                    "mother_id_energy": mother_id_energy,
+                    "CSJets": CSJets,
+                    "CS_ID_mothers": CS_ID_mothers,
+                    "CS_ID_daugthers": CS_ID_daugthers,
+                    "branching": branching,
+                    "unscaled_branching": branching,
+                    "mother_momenta": mother_momenta,
+                    "daughter_momenta": daughter_momenta
+                    }
 
         if self.transform:
             sample = self.transform(sample)
@@ -119,47 +130,44 @@ class PadTensors(object):
     
     Note that n_branching will keep the real size of these tensors
     """
-    def __init__(self, default_size, pad_token):
+    def __init__(self, default_size, pad_token, train_bool):
         assert isinstance(default_size, int)
         self.default_size = default_size
         self.pad_token = pad_token
+        self.train_bool = train_bool
             
     def __call__(self, sample):
         branching, mother_id_energy = sample["branching"], sample["mother_id_energy"]
         mother_momenta, daughter_momenta = sample["mother_momenta"], sample["daughter_momenta"]
-        CSJets = sample["CSJets"]
-        CS_ID_mothers = sample["CS_ID_mothers"]
-        CS_ID_daugthers = sample["CS_ID_daugthers"]
-        unscaled_branching = sample["unscaled_branching"]
         
         padded_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
-        padded_unscaled_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
         padded_mother_momenta = np.ones((self.default_size, mother_momenta.size()[-1])) * self.pad_token
         padded_daughter_momenta = np.ones((self.default_size, daughter_momenta.size()[-1])) * self.pad_token
-        padded_CS_jet = np.ones((self.default_size*2, CSJets.size()[-1])) * self.pad_token
-        padded_CS_ID_mothers = np.ones((self.default_size)) * self.pad_token
-        padded_CS_ID_daugthers = np.ones((self.default_size, CS_ID_daugthers.size()[-1])) * self.pad_token
-
+        
         padded_branching[:branching.size()[0], :] = branching
-        padded_unscaled_branching[:branching.size()[0], :] = unscaled_branching
         padded_mother_momenta[:mother_momenta.size()[0], :] = mother_momenta
         padded_daughter_momenta[:daughter_momenta.size()[0], :] = daughter_momenta
-        
-        padded_CS_jet[:CSJets.size()[0], :] = CSJets
-        padded_CS_ID_mothers[:CS_ID_mothers.size()[0]] = CS_ID_mothers
-        padded_CS_ID_daugthers[:CS_ID_daugthers.size()[0], :] = CS_ID_daugthers
         
         # Case of mother_id_energy: particular
         #   - has to be padded to self.output_size * self.output_size (first for recurrence, second for possible mothers)
         #   - the second dimension is actually a one-hot encoding of the index of the mother (in energy order, 0 being most energetic)
-        # Hijack the process to also produced the ending tensor (size: recurrence * 1 with value 0 if going on and 1 when stop
         padded_mother_id = np.ones((self.default_size)) * self.pad_token
         padded_mother_id[:mother_id_energy.size()[0]] = mother_id_energy
         
-        ending_val = np.ones((self.default_size)) * self.pad_token
-        for counter, elem in enumerate(mother_id_energy):
-            ending_val[counter] = 0
-        ending_val[len(mother_id_energy)] = 1
+        if not(self.train_bool):
+            CSJets = sample["CSJets"]
+            CS_ID_mothers = sample["CS_ID_mothers"]
+            CS_ID_daugthers = sample["CS_ID_daugthers"]
+            unscaled_branching = sample["unscaled_branching"]
+            padded_CS_jet = np.ones((self.default_size*2, CSJets.size()[-1])) * self.pad_token
+            padded_CS_ID_mothers = np.ones((self.default_size)) * self.pad_token
+            padded_CS_ID_daugthers = np.ones((self.default_size, CS_ID_daugthers.size()[-1])) * self.pad_token
+            padded_unscaled_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
+        
+            padded_CS_jet[:CSJets.size()[0], :] = CSJets
+            padded_CS_ID_mothers[:CS_ID_mothers.size()[0]] = CS_ID_mothers
+            padded_CS_ID_daugthers[:CS_ID_daugthers.size()[0], :] = CS_ID_daugthers
+            padded_unscaled_branching[:branching.size()[0], :] = unscaled_branching
         
         """
         # This old loop encoded 1-hot way the mother_id_energy and did the ending_val.
@@ -172,21 +180,29 @@ class PadTensors(object):
         ending_val[len(mother_id_energy)] = 1.0
         
         """
+        if self.train_bool:
+            return { "label": sample["label"],
+                     "n_branchings": sample["n_branchings"],
+                     "seed_momentum": sample["seed_momentum"],
+                     "mother_id_energy": torch.IntTensor(padded_mother_id),
+                     "branching": torch.FloatTensor(padded_branching),
+                     "mother_momenta": torch.FloatTensor(padded_mother_momenta),
+                     "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
+                   }
         
-        return { "label": sample["label"],
-                 "multiplicity": sample["multiplicity"],
-                 "n_branchings": sample["n_branchings"],
-                 "seed_momentum": sample["seed_momentum"],
-                 "ending": torch.FloatTensor(ending_val),
-                 "mother_id_energy": torch.IntTensor(padded_mother_id),
-                 "CSJets": torch.FloatTensor(padded_CS_jet),
-                 "CS_ID_mothers": torch.IntTensor(padded_CS_ID_mothers),
-                 "CS_ID_daugthers":  torch.IntTensor(padded_CS_ID_daugthers),
-                 "branching": torch.FloatTensor(padded_branching),
-                 "unscaled_branching": torch.FloatTensor(padded_unscaled_branching),
-                 "mother_momenta": torch.FloatTensor(padded_mother_momenta),
-                 "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
-                }
+        else:
+            return { "label": sample["label"],
+                     "n_branchings": sample["n_branchings"],
+                     "seed_momentum": sample["seed_momentum"],
+                     "mother_id_energy": torch.IntTensor(padded_mother_id),
+                     "CSJets": torch.FloatTensor(padded_CS_jet),
+                     "CS_ID_mothers": torch.IntTensor(padded_CS_ID_mothers),
+                     "CS_ID_daugthers":  torch.IntTensor(padded_CS_ID_daugthers),
+                     "branching": torch.FloatTensor(padded_branching),
+                     "unscaled_branching": torch.FloatTensor(padded_unscaled_branching),
+                     "mother_momenta": torch.FloatTensor(padded_mother_momenta),
+                     "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
+                    }
 
 class FeatureScaling(object):
     """
@@ -201,11 +217,13 @@ class FeatureScaling(object):
     R_JET = np.pi / 2
     R_SUB = 0.1
     """
-    def __init__(self, feature_parameter):
+    def __init__(self, feature_parameter, train_bool):
         E_jet = feature_parameter[0]
         E_sub = feature_parameter[1]
         R_jet = feature_parameter[2]
         R_sub = feature_parameter[3]
+        
+        self.train_bool = train_bool
         
         # For momenta (any sort of 4 momenta)
         self.mom_e_shift = np.log(E_sub)
@@ -266,28 +284,37 @@ class FeatureScaling(object):
         seed_momentum[1] = (np.log(np.clip(seed_momentum[1], EPSILON, INF)) - self.mom_th_shift) / self.mom_th_scale
         seed_momentum[2] = (seed_momentum[2] - self.mom_phi_shift) / self.mom_phi_scale
         seed_momentum[3] = (np.log(np.clip(seed_momentum[3], EPSILON, INF)) - self.mom_mass_shift) / self.mom_mass_scale
-
-        return { "label": sample["label"],
-                 "multiplicity": sample["multiplicity"],
-                 "n_branchings": sample["n_branchings"],
-                 "seed_momentum": seed_momentum,
-                 "ending": sample["ending"],
-                 "mother_id_energy": sample["mother_id_energy"],
-                 "CSJets": sample["CSJets"],
-                 "CS_ID_mothers": sample["CS_ID_mothers"],
-                 "CS_ID_daugthers": sample["CS_ID_daugthers"],
-                 "branching": branching,
-                 "unscaled_branching": sample["unscaled_branching"],
-                 "mother_momenta": mother_momenta,
-                 "daughter_momenta": daughter_momenta
+        
+        if self.train_bool:
+            return { "label": sample["label"],
+                     "n_branchings": sample["n_branchings"],
+                     "seed_momentum": seed_momentum,
+                     "mother_id_energy": sample["mother_id_energy"],
+                     "branching": branching,
+                     "mother_momenta": mother_momenta,
+                     "daughter_momenta": daughter_momenta
                 }
+        else:
+            return { "label": sample["label"],
+                     "n_branchings": sample["n_branchings"],
+                     "seed_momentum": seed_momentum,
+                     "mother_id_energy": sample["mother_id_energy"],
+                     "CSJets": sample["CSJets"],
+                     "CS_ID_mothers": sample["CS_ID_mothers"],
+                     "CS_ID_daugthers": sample["CS_ID_daugthers"],
+                     "branching": branching,
+                     "unscaled_branching": sample["unscaled_branching"],
+                     "mother_momenta": mother_momenta,
+                     "daughter_momenta": daughter_momenta
+                    }
 
 class GranulariseBranchings(object):
     """
     Converts the branching infos into one hot vector of given granularity
     """
-    def __init__(self, granularity):
+    def __init__(self, granularity, train_bool):
         self.granularity = granularity
+        self.train_bool = train_bool
     
     def __call__(self, sample):
         branching = sample["branching"]
@@ -305,19 +332,64 @@ class GranulariseBranchings(object):
                                                y[branching[row, 2].item()],
                                                y[branching[row, 3].item()]], dim = 0)
         """
-        return {"label": sample["label"],
-                "multiplicity": sample["multiplicity"],
-                "n_branchings": sample["n_branchings"],
-                "seed_momentum": sample["seed_momentum"],
-                "mother_id_energy": sample["mother_id_energy"],
-                "ending": sample["ending"],
-                "CSJets": sample["CSJets"],
-                "CS_ID_mothers": sample["CS_ID_mothers"],
-                "CS_ID_daugthers": sample["CS_ID_daugthers"],
-                "branching": branching_dis,
-                "unscaled_branching": sample["unscaled_branching"],
-                "mother_momenta": sample["mother_momenta"],
-                "daughter_momenta": sample["daughter_momenta"]
-               }
+        if self.train_bool:
+            return {"label": sample["label"],
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": sample["seed_momentum"],
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "branching": branching_dis,
+                    "mother_momenta": sample["mother_momenta"],
+                    "daughter_momenta": sample["daughter_momenta"]
+                 }
+            
+        else:
+            return {"label": sample["label"],
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": sample["seed_momentum"],
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "CSJets": sample["CSJets"],
+                    "CS_ID_mothers": sample["CS_ID_mothers"],
+                    "CS_ID_daugthers": sample["CS_ID_daugthers"],
+                    "branching": branching_dis,
+                    "unscaled_branching": sample["unscaled_branching"],
+                    "mother_momenta": sample["mother_momenta"],
+                    "daughter_momenta": sample["daughter_momenta"]
+                   }
 
+class AddExtraLabel(object):
+    """
+    This transform will add to the dictionnary of each sample an extra label. This indicates if the data file is quark or gluon rich.
+    Quark-rich indicates 1, gluon-rich indicates 0 and this is stored in dataset_label argument of the sample
+    """
+    def __init__(self, extra_value, train_bool):
+        assert isinstance(extra_value, int)
+        self.extra_value = extra_value
+        self.train_bool = train_bool
+    
+    def __call__(self, sample):
+        if self.train_bool:
+            return {"label": sample["label"],
+                    "dataset_label": self.extra_value,
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": sample["seed_momentum"],
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "branching": sample["branching"],
+                    "mother_momenta": sample["mother_momenta"],
+                    "daughter_momenta": sample["daughter_momenta"]
+                }
+        
+        else:
+            return {"label": sample["label"],
+                    "dataset_label": self.extra_value,
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": sample["seed_momentum"],
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "CSJets": sample["CSJets"],
+                    "CS_ID_mothers": sample["CS_ID_mothers"],
+                    "CS_ID_daugthers": sample["CS_ID_daugthers"],
+                    "branching": sample["branching"],
+                    "unscaled_branching": sample["unscaled_branching"],
+                    "mother_momenta": sample["mother_momenta"],
+                    "daughter_momenta": sample["daughter_momenta"]
+                    }
 
