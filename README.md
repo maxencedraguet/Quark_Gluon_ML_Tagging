@@ -73,56 +73,56 @@
 * I had a look at the diagnostic plots of the dijet samples gathered. All seems normal except for a strange peak in jet energy and pT. For all pairs, ttbar is left and dijet right.
 * constituentDeltaRtoJet:
 <p float="center">
-<img src="Readme_Result/ttbar/constituentDeltaRtoJet.png" width="350" />
-<img src="Readme_Result/dijet/constituentDeltaRtoJet.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/constituentDeltaRtoJet.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/constituentDeltaRtoJet.png" width="350" />
 </p>
 
 * constituentE_log:
 <p float="center">
-<img src="Readme_Result/ttbar/constituentE_log.png" width="350" />
-<img src="Readme_Result/dijet/constituentE_log.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/constituentE_log.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/constituentE_log.png" width="350" />
 </p>
 
 * differencePx_log:
 <p float="center">
-<img src="Readme_Result/ttbar/differencePx_log.png" width="350" />
-<img src="Readme_Result/dijet/differencePx_log.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/differencePx_log.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/differencePx_log.png" width="350" />
 </p>
 
 * isTruthQuark:
 <p float="center">
-<img src="Readme_Result/ttbar/isTruthQuark.png" width="350" />
-<img src="Readme_Result/dijet/isTruthQuark.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/isTruthQuark.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/isTruthQuark.png" width="350" />
 </p>
 
 * isNotPVJet (this is before cuts are applied:
 <p float="center">
-<img src="Readme_Result/ttbar/isNotPVJet_Before_cuts.png" width="350" />
-<img src="Readme_Result/dijet/isNotPVJet_Before_cuts.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/isNotPVJet_Before_cuts.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/isNotPVJet_Before_cuts.png" width="350" />
 </p>
 
 * jetE:
 <p float="center">
-<img src="Readme_Result/ttbar/jetE.png" width="350" />
-<img src="Readme_Result/dijet/jetE.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/jetE.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/jetE.png" width="350" />
 </p>
 
 * jetPt:
 <p float="center">
-<img src="Readme_Result/ttbar/jetPt.png" width="350" />
-<img src="Readme_Result/dijet/jetPt.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/jetPt.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/jetPt.png" width="350" />
 </p>
 
 * jetNumberConstituent_log:
 <p float="center">
-<img src="Readme_Result/ttbar/jetNumberConstituent_log.png" width="350" />
-<img src="Readme_Result/dijet/jetNumberConstituent_log.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/jetNumberConstituent_log.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/jetNumberConstituent_log.png" width="350" />
 </p>
 
 * jetWidth:
 <p float="center">
-<img src="Readme_Result/ttbar/jetWidth.png" width="350" />
-<img src="Readme_Result/dijet/jetWidth.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/ttbar/jetWidth.png" width="350" />
+<img src="Readme_Result/Full_DAOD_JETM6/dijet/jetWidth.png" width="350" />
 </p>
 
 
