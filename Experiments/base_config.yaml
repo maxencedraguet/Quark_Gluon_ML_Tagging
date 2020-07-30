@@ -1,4 +1,4 @@
-experiment_name:                    test                      # Experiment name.
+experiment_name:                    binary_model_ppl_1e_200b_g25e_q25e                # Experiment name.
 use_gpu:                            False                     # Use a GPU if available.
 seed:                               1                         # Random seed to ensure reproducibility.
 dataset:                            Set4                      # Data to use (Set1, Set2, Set3, Set4...)
@@ -9,13 +9,17 @@ dataset:                            Set4                      # Data to use (Set
 #   For Junipr dataset (Set 4) example: ../example_JUNIPR_data.json
 #   For Junipr dataset (Set 4): /data/atlas/atlasdata3/mdraguet/Set4/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6.json
 #   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500): /data/atlas/atlasdata3/mdraguet/Set4_tri_cut/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6.json
+#   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500) for quarks and gluons:
+#   - /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
+#   - /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6
 
 #   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [2 or 3] /loader_list.txt
 #   For GranularUpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set4/loader_list.txt
+#                                                           data disk version: /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/loader_list.txt
 #   For Train_Test_Separator: the complete path to a h5 file to split into train-validation-test: /data/atlas/atlasdata3/mdraguet/Set2/HF/mc16aprocessed.h5
-absolute_data_path:                 /home/draguet/QGdis/Code/Data/Set4/loader_list.txt
+absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
 fraction_data:                      1                         # Fraction of the data to load.
-test_size:                          0.6                       # Fraction of data to use for test
+test_size:                          0.2                       # Fraction of data to use for test
 equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
 
 cross_section_sampler:                                        # A cross section sampler. Works with a file of cross section indexed by dsid: Backgrounds.txt
@@ -26,7 +30,7 @@ cross_section_sampler:                                        # A cross section 
 
 # Model to implement (BDT, NN, Junipr ...) or method to run (UpRootTransformer, GranularUpRootTransformer, Train_Test_Separator ...)
 # Warning, this is case sensitive
-experiment_type:                    GranularUpRootTransformer
+experiment_type:                    Junipr
 
 save_model:                         True                      # Whether to save the model or not
 diagnostic:                         True                      # For appropriate methods, saves some diagnostic information (e.g.: UpRootTransformer.py, GranularUpRootTransformer, ...)
@@ -59,15 +63,25 @@ BDT_model:                                                    # For AdaBoostClas
 Junipr_Model:
     binary_runner_bool:             False                     # If true, will load two models (as specified in binary_runner) to perform a binarised-version of Junipr
     train:                          True                      # If true, train the model
-    assess:                         True                      # If true, assess the model
+    assess:                         False                     # If true, assess the model
     load:                           False                     # If true, load a model as specified below
-    load_model_path:                /home/draguet/QGdis/Code/Experiments/Results/2020-07-19-15-07-13/test/saved_JUNIPR_weights.pt
-    load_model_config:              /home/draguet/QGdis/Code/Experiments/Results/2020-07-19-15-07-13/test/base_config.yaml
+    load_model_path:                /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/2020-07-28-17-36-23/gluon_model_ppl_25e_200b/saved_JUNIPR_weights.pt
+    load_model_config:              /data/atlas/atlasdata3/mdraguet/Code/Experiments/base_config.yaml
     binary_runner:                                            # Paths to the two models for binary Junipr.
-        quark_model_path:
-        quark_config_path:
-        gluon_model_path:
-        gluon_config_path:
+        gluon_data_path:            /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
+        quark_data_path:            /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6
+        # Note that these two data paths each require a _train.json and .test.json files
+        quark_model_path:           /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/quark_25e_200b_firstI_ppl/saved_JUNIPR_weights.pt
+        quark_config_path:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/quark_25e_200b_firstI_ppl/base_config.yaml
+        gluon_model_path:           /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/gluon_25e_200b_firstI_ppl_with_reload_5/saved_JUNIPR_weights.pt
+        gluon_config_path:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/gluon_25e_200b_firstI_ppl_with_reload_5/config.yaml
+
+        #gluon_data_path: ../example_JUNIPR_2
+        #quark_data_path: ../example_JUNIPR_1
+        #quark_model_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-07-29-20-41-52/model1/saved_JUNIPR_weights.pt
+        #quark_config_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-07-29-20-41-52/model1/config.yaml
+        #gluon_model_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-07-29-20-42-19/model2/saved_JUNIPR_weights.pt
+        #gluon_config_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-07-29-20-42-19/model2/config.yaml
 
     assess_number_of_jets:          10                        # Number of jet tree to produce in assessing
     Junipr_Dataset:
@@ -75,12 +89,13 @@ Junipr_Model:
         padding_value:              0.0                       # The padded-value. To be chosen carefully (otherwise you're gonna remove real data)
         feature_scaling_parameters: [600.0, 0.1, 1.571, 0.01]     # [E_jet, E_sub, R_jet, R_sub] used for scaling values. 1.571 value for R_jet is pi/2
         granularity:                10                        # To bin the values of branches
+        validation_size:            0.2                       # Part of the test set to be taken aside for validation (in training loop)
     lr:                             0.001
     lr_scheduler:                   True
     epoch:                          1
-    batch_size:                     1
+    batch_size:                     200
     initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
-    test_frequency:                 1                         # Frequency of test error estimation during traing (for plotting purpose)
+    test_frequency:                 5                         # Frequency of test error estimation during traing (for plotting purpose)
     optimiser:
         type:                       adam
         params:                     [0.9, 0.999, 0.00000001]  # Parameters of the optimiser: should be general enough but could be optimised.
@@ -155,8 +170,8 @@ UpRootTransformer:
     to_HDF5:                        True                                     # Save to HDF5
 
 GranularUpRootTransformer:
-    save_path:                      /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon/    # where to store the result
-    save_tables:                    True                                     # Whether to store the intermediary tables of constituents and jets (format define below)
+    save_path:                      /data/atlas/atlasdata3/mdraguet/Set4_gluon_complete/    # where to store the result
+    save_tables:                    False                                    # Whether to store the intermediary tables of constituents and jets (format define below)
     clean_jets:                     True                                     # Bool to clean the jets
     to_CSV:                         False                                    # Save to CSV
     to_HDF5:                        True                                     # Save to HDF5

@@ -1,0 +1,7 @@
+executable   = /home/draguet/QGdis/Code/Experiments/Submitter_Condor_Bash
+universe     = vanilla
+output       = /home/draguet/QGdis/Code/Experiments/local_condor/results.output.$(ClusterId)
+error        = /home/draguet/QGdis/Code/Experiments/local_condor/results.error.$(ClusterId)
+log          = /home/draguet/QGdis/Code/Experiments/local_condor/results.log.$(ClusterId)
+request_cpus = 4
+queue 1
