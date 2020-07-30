@@ -178,6 +178,7 @@ class NNRunner(_BaseRunner):
     def log_confusion_matrix(epoch, logs):
         """
         A confusion matrix logger to tensorboard
+        Taken from : ?
         """
         # Use the model to predict the values from the validation dataset.
         test_pred_raw = model.predict(test_images)

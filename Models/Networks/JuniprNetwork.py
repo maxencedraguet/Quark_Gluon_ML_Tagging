@@ -176,6 +176,7 @@ class JuniprNetwork(_BaseNetwork):
         return output_dictionnary
             
     def save_model(self, path) -> None:
+        os.makedirs(path, exist_ok=True)
         torch.save(self.state_dict(), os.path.join(path, 'saved_JUNIPR_weights.pt'))
     
     def load_model(self, path) -> None:
