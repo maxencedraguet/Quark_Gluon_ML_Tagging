@@ -187,6 +187,8 @@ def draw_tree(node_dic, edge_dic, add_label_proba, title, window_extrema, path, 
     ax0.set_title(title)
     colour_map = matplotlib.cm.get_cmap('jet')
     #colour_norm = matplotlib.colors.Normalize(vmin=0.0, vmax= max_value_colour, clip= True)
+    if max_value_colour < 100:
+        max_value_colour = 100
     colour_norm = matplotlib.colors.LogNorm(vmin=1, vmax= max_value_colour, clip= True)
     middle_colour_range_energy = colour_norm.inverse(0.5)
     middle_colour_range_energy = int((middle_colour_range_energy +2)/10) *10    # simplify it to the lowest tenth
