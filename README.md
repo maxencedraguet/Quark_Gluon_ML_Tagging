@@ -1,6 +1,7 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
+* Regarding the meeting with Alan's group on Monday: I pushed a draft of the slides to the repo (Short_Presentation_3rd_August_Draguet.pdf)
 
 * A week of many computational challenges. We (with Vip) still have not found what does not work with Condor. I shared the problem on Monday and Ynir (a student of Aaron) kindly had a look at the submit files but could not find any issue. I shared the problem with Prof. Bortoletto (Physics) and she advised me to contact some of her students. 
 
