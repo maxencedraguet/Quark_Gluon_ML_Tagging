@@ -74,7 +74,7 @@
 
 * To follow the steps of JUNIPR, I am using a learning rate schedule as follow:
 <p float="center">
-<img src="Readme_Result/schedule_model2.png" width="350" />
+<img src="Readme_Result/schedule_model2.png" width="600" />
 </p>
 
 * This has already been training for two days (expected to reach the end tomorrow). Here are the learning curves for the gluon (left) and quark (right) models so far:
@@ -95,14 +95,14 @@
     * As discussed last week, I analysed the issue by implementing some further cut. Isolating quark jets energy (left) and gluon jets energy (right) showed that quarks are overly represented in this secondary peak:
 
     <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/jquark/jetEt.png" width="350" />
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/quark/jetEt.png" width="350" />
     <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/gluon/jetE.png" width="350" />
     </p>
 
     * This is also visible when adding a pT cut removing events below 300 GeV. Indeed, here are how the sample is populated before (left) and after all cuts (right):
     <p float="center">
     <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/above_peak/isTruthQuark_Before_cuts.png" width="350" />
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/above_peak/jisTruthQuark.png" width="350" />
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/above_peak/isTruthQuark.png" width="350" />
     </p>
 
     * Aaron agrees that this is due to the samples he downloaded coming from different slices in pT. He is working on getting a sample that is not biased. Once ready, I'll process it into JUNIPR jets.  
@@ -115,7 +115,7 @@
 
 * These two maps indicate the two limit scenarios: either the jet is globally reconstructed with a small number of forgotten components (left) or it is cut into several well furnished jets (right). To study the prevalence of each scenario, I analysed all miss-reconstructed jet for dijet, ttbar and the new ttbar dataset with the E_sub < 1/2 GeV cut. The result is summarised in the next histogram that displays the count for size of largest and smallest jet reconstructed (all cases add two jets reconstructed, never more):
 <p float="center">
-<img src="Readme_Result/Maps/histogram_number_constituents.png" width="700" />
+<img src="Readme_Result/Maps/histogram_number_constituents.png" width="600" />
 </p>
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
