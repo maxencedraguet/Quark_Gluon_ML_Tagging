@@ -80,7 +80,9 @@ class GranularUpRootTransformer(ABC):
         
         self.cut_train_test= config.get(["GranularUpRootTransformer", "cut_train_test"])
         self.test_size = config.get(["GranularUpRootTransformer", "test_size"])
-        
+        self.add_cut = config.get(["GranularUpRootTransformer", "add_cut"])
+        self.special_cut_junipr_bool = config.get(["GranularUpRootTransformer", "special_cut_junipr", "special_cut_bool"])
+        self.special_cut_junipr_param = config.get(["GranularUpRootTransformer", "special_cut_junipr", "param"])
         """
         add_to_path = ""
         if self.clean_jets_bool:
@@ -137,7 +139,7 @@ class GranularUpRootTransformer(ABC):
         """
         c_pdf = constituent_pdf.copy(deep = True)
         j_pdf = jet_pdf.copy(deep = True)
-        
+
         # Small check: no constituent should have a negative energy. If this happens, drop these constituents
         if (any(c_pdf['constituentE']) < 0):
             print("There are some constituents with negative energy!")
@@ -168,12 +170,36 @@ class GranularUpRootTransformer(ABC):
             c_pdf = c_pdf_all
             j_pdf = j_pdf_all
         
+        """
+        # this is an additional control to remove constituents with an energy below E_sub and a radius to jet below R_sub
+        # WARNING: not working as expected: the number of constituents is a j_pdf info. Implementing this at the level of the algorithm
+        if self.special_cut_junipr_bool:
+            E_sub = self.special_cut_junipr_param[0]
+            R_sub = self.special_cut_junipr_param[1]
+            drop_bad_constituents_indices = c_pdf[(c_pdf['constituentE'] < E_sub)       |
+                                                  (c_pdf['constituentDeltaRtoJet'] < R_sub)].index
+            c_pdf.drop(drop_bad_constituents_indices, inplace=True)
+        """
+        
         print("Initial shape jet ", j_pdf.shape)
         if self.clean_jets_bool:
             drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] < 20)       |
                                          (j_pdf['isNotPVJet'] == 1)  |      # This means your jet is not at the primary vertex (it's on another vertex)
                                          (j_pdf['jetNumberConstituent'] <= 4)].index
             j_pdf.drop(drop_bad_jet_indices, inplace=True)
+            if self.add_cut == "isolate_q_truth":
+                drop_bad_jet_indices = j_pdf[(j_pdf['isTruthQuark'] !=1)].index
+                j_pdf.drop(drop_bad_jet_indices, inplace=True)
+            elif self.add_cut == "isolate_g_truth":
+                drop_bad_jet_indices = j_pdf[(j_pdf['isTruthQuark'] !=0)].index
+                j_pdf.drop(drop_bad_jet_indices, inplace=True)
+            elif self.add_cut == "pt_above_peak":
+                drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] < 300)].index
+                j_pdf.drop(drop_bad_jet_indices, inplace=True)
+            elif self.add_cut == "pt_below_peak":
+                drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] > 300)].index
+                j_pdf.drop(drop_bad_jet_indices, inplace=True)
+
         j_pdf_small = j_pdf[['entry', 'subentry', 'isTruthQuark']]
         print("Final shape jet ", j_pdf.shape)
         print("Initial shape constituent ", c_pdf.shape)
@@ -239,9 +265,10 @@ class GranularUpRootTransformer(ABC):
             
             if self.do_JUNIPR_transform_bool:
                 start = time.process_time()
-                dictionnary_result = perform_clustering(self.JUNIPR_cluster_algo, self.JUNIPR_cluster_radius, jet_pdf, constituent_pdf)
+                dictionnary_result, dictionnary_exception  = perform_clustering(self.JUNIPR_cluster_algo, self.JUNIPR_cluster_radius, jet_pdf, constituent_pdf)
                 print("Time for jet clustering to JUNIPR {}".format(time.process_time() - start))
                 if self.save_JUNIPR_transform_bool:
+                    self.save_junipr_data_to_json(dictionnary_exception, file_name+"_EXCEPTIONS")
                     if self.cut_train_test:
                         list_of_jets = dictionnary_result["JuniprJets"]
                         random.shuffle(list_of_jets)
@@ -274,15 +301,20 @@ class GranularUpRootTransformer(ABC):
         os.makedirs(self.save_path_hf, exist_ok=True)
         pdf.to_hdf(os.path.join(self.save_path_hf, file_name + '.h5'), key = file_name)
 
-    def save_junipr_data_to_json(self, dictionnary, file_name):
+    def save_junipr_data_to_json(self, dictionnary, file_name, bool_no_indent = True):
         """
         Saves a junipr-ready data dicitonnay to a json file located self.save_path_junipr/ + file_name.json
         """
         os.makedirs(self.save_path_junipr, exist_ok=True)
         #file_name = "example_JUNIPR_data_CA"
             #with open( os.path.join(self.save_path_junipr, file_name+ ".json"), "w") as write_file:
-        with open( os.path.join(self.save_path_junipr, file_name + '.json'), "w") as write_file:
-            json.dump(dictionnary, write_file) #, indent=4)
+        if bool_no_indent:
+            with open( os.path.join(self.save_path_junipr, file_name + '.json'), "w") as write_file:
+                json.dump(dictionnary, write_file) #, indent=4)
+        else:
+            with open( os.path.join(self.save_path_junipr, file_name + '.json'), "w") as write_file:
+                json.dump(dictionnary, write_file, indent=4)
+    
 
     def diagnostic_plots(self, df, file_name, vars, additional_text = ""):
         """

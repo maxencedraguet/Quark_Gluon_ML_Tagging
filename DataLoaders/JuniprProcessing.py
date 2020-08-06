@@ -1,4 +1,4 @@
-#############################################################################
+ #############################################################################
 #
 # JuniprProcessing.py
 #
@@ -24,6 +24,13 @@ def get_4mom(jet):
     Returns a list with the info ['E', 'px', 'py', 'pz'] from a PseudoJet object.
     """
     return [float("{:.8f}".format(jet.e)), float("{:.8f}".format(jet.px)), float("{:.8f}".format(jet.py)), float("{:.8f}".format(jet.pz))]
+
+def get_3mom_angles_tuple(jet):
+    """
+    Returns a list with the info ['E', 'eta', 'phi'] from a PseudoJet object.
+    """
+    return tuple([float("{:.8f}".format(jet.e)), float("{:.8f}".format(jet.eta)), float("{:.8f}".format(jet.phi))])
+
 
 def get_4mom_from_tuple(jet):
     """
@@ -182,7 +189,9 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
     label_data  = cpdf['isTruthQuark'].to_numpy() #only two for now [:2]
     
     collected_data = dict()
+    collected_exceptions = dict()
     junipr_ready_datapoint = list()
+    list_of_exceptional_events = list()
     #for filou, elem in enumerate(tqdm(column_data)):
     for filou, elem in enumerate(column_data):
         #print("\n JET {}\n".format(filou))
@@ -221,8 +230,21 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
         if (len(jets) !=1):
             print("Warning: from info for a sole jet, {} jets were reconstructed".format(len(jets)))
             #If such a badly reconstructed jet is found, skip it
+            number_of_jet_items = len(jets)
+            list_of_elements_in_event = dict()
+            for counter_jet in range(number_of_jet_items):
+                the_jet = jets[counter_jet]
+                list_of_constituents = list()
+                for ind, consti in enumerate(the_jet):
+                    constituent = get_3mom_angles_tuple(consti)
+                    list_of_constituents.append(constituent)
+                list_of_elements_in_event[counter_jet] = [get_3mom_angles_tuple(the_jet), list_of_constituents]
+        
+            list_of_exceptional_events.append({"event_count":filou, "number_component":number_of_jet_items, "dictionnary_component":list_of_elements_in_event})
+                #if len(list_of_exceptional_events) == 20: #WARNING: abnormal use
+                #    break
             continue
-            
+                #continue #WARNING: abnormal use
         jet = jets[0] #jet is the first and sole element of this list
         #print("The inclusive jet is ",jet)
         seed_momentum = get_4mom_EM_rel(jet, jet)
@@ -498,7 +520,8 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
         junipr_ready_datapoint.append(datapoint)
         
     collected_data["JuniprJets"] = junipr_ready_datapoint
-    return collected_data
+    collected_exceptions["JuniprException"] = list_of_exceptional_events
+    return collected_data, collected_exceptions
 
 
 

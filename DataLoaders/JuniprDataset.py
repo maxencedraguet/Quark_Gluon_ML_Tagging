@@ -204,14 +204,16 @@ class PadTensors(object):
                      "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
                     }
 
-class FeatureScaling(object):
+class FeatureScalingJunipr(object):
     """
-    Scales the jet values as presented in Junipr paper. Note that the pertinence of this here is reduced since
-    our dataset is not centred around some jet values (expect for R_jet and R_sub). The procedure is however kept as
-    not other scaling feature seemed natural
+    Scales the jet values as presented in Junipr paper and listed in:
+        https://github.com/andersjohanandreassen/JUNIPR
+    Note that the pertinence of this here is reduced since our dataset is not centred around some jet values. The procedure is however kept as
+    no other scaling feature seemed natural
     
-    Major issue: the branching values really need to between 0 and 1. They are indeed to become one-hot vectors and
-    the discretisation only work if these values are in the right range.
+    Major issue with: it destroys a lot of information because the scaling is somewhat unnatural.
+    A lot of the value of the mother and daughter momenta become negative (particularly the mass since it's often 0 and the energy since the range is so large)
+    They ended being trimed to either 0 or 1 but this blurs a lot of the physics
     E_JET = 500.0
     E_SUB = 0.1 (much lower not to get negative component.
     R_JET = np.pi / 2
@@ -255,36 +257,156 @@ class FeatureScaling(object):
         branching[:, 3] = (np.log(np.clip(branching[:, 3], EPSILON, INF)) - self.branch_delta_shift) / self.branch_delta_scale
         #these two tests should be REMOVED in final version
         """
-        if(branching[branching<0].size()[0] !=0):
-            print("Negative values in branching")
-        if(branching[branching>1].size()[0] !=0):
-            print("Values above 1 in branching")
+        loc1 = branching[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("z below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("z above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = branching[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+                
+        loc1 = branching[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+                
+        loc1 = branching[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("delta below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("delta above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
         """
+        
+        
+        
         # operate on each momenta (mother and daughter)
         # Mother:
         mother_momenta[:, 0] = (np.log(np.clip(mother_momenta[:, 0], EPSILON, INF)) - self.mom_e_shift) / self.mom_e_scale
         mother_momenta[:, 1] = (np.log(np.clip(mother_momenta[:, 1], EPSILON, INF)) - self.mom_th_shift) / self.mom_th_scale
         mother_momenta[:, 2] = (mother_momenta[:, 2] - self.mom_phi_shift) / self.mom_phi_scale
         mother_momenta[:, 3] = (np.log(np.clip(mother_momenta[:, 3], EPSILON, INF)) - self.mom_mass_shift) / self.mom_mass_scale
+        """
+        loc1 = mother_momenta[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("en below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("en above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
         
+        loc1 = mother_momenta[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = mother_momenta[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = mother_momenta[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("mass above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+
+        """
         #daugther1
         daughter_momenta[:, 0] = (np.log(np.clip(daughter_momenta[:, 0], EPSILON, INF)) - self.mom_e_shift) / self.mom_e_scale
         daughter_momenta[:, 1] = (np.log(np.clip(daughter_momenta[:, 1], EPSILON, INF)) - self.mom_th_shift) / self.mom_th_scale
         daughter_momenta[:, 2] = (daughter_momenta[:, 2] - self.mom_phi_shift) / self.mom_phi_scale
         daughter_momenta[:, 3] = (np.log(np.clip(daughter_momenta[:, 3], EPSILON, INF)) - self.mom_mass_shift) / self.mom_mass_scale
-        
+
         #daughter2
         daughter_momenta[:, 4] = (np.log(np.clip(daughter_momenta[:, 4], EPSILON, INF)) - self.mom_e_shift) / self.mom_e_scale
         daughter_momenta[:, 5] = (np.log(np.clip(daughter_momenta[:, 5], EPSILON, INF)) - self.mom_th_shift) / self.mom_th_scale
         daughter_momenta[:, 6] = (daughter_momenta[:, 6] - self.mom_phi_shift) / self.mom_phi_scale
         daughter_momenta[:, 7] = (np.log(np.clip(daughter_momenta[:, 7], EPSILON, INF)) - self.mom_mass_shift) / self.mom_mass_scale
+        """
+        loc1 = daughter_momenta[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("en below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("en above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
 
+        loc1 = daughter_momenta[:, 4]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("en below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("en above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 5]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = daughter_momenta[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = daughter_momenta[:, 6]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("delta below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("delta above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 7]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("delta below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("delta above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+        """
+        
         #seed_momentum
         seed_momentum[0] = (np.log(np.clip( seed_momentum[0], EPSILON, INF)) - self.mom_e_shift) / self.mom_e_scale
         seed_momentum[1] = (np.log(np.clip(seed_momentum[1], EPSILON, INF)) - self.mom_th_shift) / self.mom_th_scale
         seed_momentum[2] = (seed_momentum[2] - self.mom_phi_shift) / self.mom_phi_scale
         seed_momentum[3] = (np.log(np.clip(seed_momentum[3], EPSILON, INF)) - self.mom_mass_shift) / self.mom_mass_scale
-        
+        """
+        loc1 = seed_momentum[0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("en below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("en above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = seed_momentum[1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+                
+        loc1 = seed_momentum[2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = seed_momentum[3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("mass above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+        """
         if self.train_bool:
             return { "label": sample["label"],
                      "n_branchings": sample["n_branchings"],
@@ -307,6 +429,316 @@ class FeatureScaling(object):
                      "mother_momenta": mother_momenta,
                      "daughter_momenta": daughter_momenta
                     }
+
+class FeatureScalingOwn(object):
+    """
+        Scales the jet values using the property of the function log(1 + alpha * VARIABLE) / log(1 + alpha * EXPECTED_LIMIT)
+        Where:
+            - alpha is a parameter depending on the signal being processed,
+            - VARIABLE is the variable being scaled
+            - EXPECTED_LIMIT is the expected end of this range (anything above will end up trimmed at 1).
+        Note that each variable trimmed should be positive ... any value below 1 might lead to an issue (particularly if alpha * VARIABLE is below -1)
+        What follows is for each variables some typical parameters and expected limits
+        Branching z: 2 | 1/2
+        Branching theta: 50 | pi
+        Branching delta: 5000 | pi      # far more likely to be small than theta since this is the hard radiation
+        Branching phi: exception: this is linearly scaled phi / 2 pi since equiprobable.
+        
+        For momenta (mother and daughters):
+        Momenta energy: 0.1 | 700  # Observation that most constituents energy occurs before 700, in fact very narrowly before 50. 700 was chosen so that the steep part occurs around 50
+        Momenta theta: 50 | pi  # same as branching)/Users/goormans/Desktop/Oxford/Project/Code/DataLoaders/JuniprDataset.py
+        Momenta phi: EXCEPTION: this is linearly scaled phi / 2 pi since equiprobable, as for branching
+        Momenta mass: 0.2 | 50     #  Observation that most seed_momenta mass is below 25 (the jet masses). This has been arranged for helping this. Note that many of the final state constituents have no mass (since they are from caloriemter)
+        """
+    def __init__(self, train_bool):
+        self.parameter_z = 2
+        self.parameter_theta = 50
+        self.parameter_delta = 5000
+        self.parameter_energy = 0.1
+        self.parameter_mass = 0.2
+        self.limit_z = 1/2
+        self.limit_theta =  np.pi
+        self.limit_delta =  np.pi
+        self.limit_energy = 700
+        self.limit_mass = 50
+        
+        self.train_bool = train_bool
+    
+    def __call__(self, sample):
+        branching, mother_momenta, daughter_momenta = sample["branching"], sample["mother_momenta"], sample["daughter_momenta"]
+        seed_momentum = sample["seed_momentum"]
+        n_branchings = sample["n_branchings"]
+        """
+        print("############################################################")
+        print("n_branchings: ", n_branchings)
+        """
+        
+        # The scaling function used:
+        def scaler_function(variable, limit, parameter):
+            return np.log( 1 + np.clip(variable * parameter, 0, INF)) / np.log( 1 + np.clip(limit * parameter, 0, INF))
+        """
+        loc1 = branching[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("z below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = branching[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = branching[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = branching[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("delta below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        """
+        # operate on branching: z, theta, phi, delta
+        branching[:, 0] = scaler_function(branching[:, 0], self.limit_z, self.parameter_z)
+        branching[:, 1] = scaler_function(branching[:, 1], self.limit_theta, self.parameter_theta)
+        branching[:, 2] = branching[:, 2] / (2 * np.pi)
+        branching[:, 3] = scaler_function(branching[:, 3], self.limit_delta, self.parameter_delta)
+        
+        # these two tests should be REMOVED in final version
+        """
+        loc1 = branching[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("z below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("z above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = branching[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = branching[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = branching[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("delta below 0 in branching :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("delta above 1 in branching :{}".format(loc1[loc1>1].size()[0]))
+        """
+        # operate on each momenta (mother and daughter)
+        # Mother:
+        """
+        loc1 = mother_momenta[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = mother_momenta[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = mother_momenta[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = mother_momenta[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        """
+        mother_momenta[:, 0] = scaler_function(mother_momenta[:, 0], self.limit_energy, self.parameter_energy)
+        mother_momenta[:, 1] = scaler_function(mother_momenta[:, 1], self.limit_theta, self.parameter_theta)
+        mother_momenta[:, 2] = mother_momenta[:, 2] / (2 * np.pi)
+        mother_momenta[:, 3] = scaler_function(mother_momenta[:, 3], self.limit_mass, self.parameter_mass)
+        """
+        loc1 = mother_momenta[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("energy above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+        
+        loc1 = mother_momenta[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+                
+        loc1 = mother_momenta[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = mother_momenta[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in mother_momenta :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("mass above 1 in mother_momenta :{}".format(loc1[loc1>1].size()[0]))
+        """
+        # Daughters
+        """
+        loc1 = daughter_momenta[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 4]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 5]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 6]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = daughter_momenta[:, 7]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        """
+        # daugther1
+        daughter_momenta[:, 0] = scaler_function(daughter_momenta[:, 0], self.limit_energy, self.parameter_energy)
+        daughter_momenta[:, 1] = scaler_function(daughter_momenta[:, 1], self.limit_theta, self.parameter_theta)
+        daughter_momenta[:, 2] = daughter_momenta[:, 2] / (2 * np.pi)
+        daughter_momenta[:, 3] = scaler_function(daughter_momenta[:, 3], self.limit_mass, self.parameter_mass)
+
+        # daughter2
+        daughter_momenta[:, 4] = scaler_function(daughter_momenta[:, 4], self.limit_energy, self.parameter_energy)
+        daughter_momenta[:, 5] = scaler_function(daughter_momenta[:, 5], self.limit_theta, self.parameter_theta)
+        daughter_momenta[:, 6] = daughter_momenta[:, 6] / (2 * np.pi)
+        daughter_momenta[:, 7] = scaler_function(daughter_momenta[:, 7], self.limit_mass, self.parameter_mass)
+        """
+        loc1 = daughter_momenta[:, 0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("energy above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 4]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("energy above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 5]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 6]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in daughter_momenta 1 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("mass above 1 in daughter_momenta 1:{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = daughter_momenta[:, 7]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in daughter_momenta 2 :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("mass above 1 in daughter_momenta 2:{}".format(loc1[loc1>1].size()[0]))
+        """
+        # seed_momentum
+        """
+        loc1 = seed_momentum[0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = seed_momentum[1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = seed_momentum[2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        
+        loc1 = seed_momentum[3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        """
+        seed_momentum[0] = scaler_function(seed_momentum[0], self.limit_energy, self.parameter_energy)
+        seed_momentum[1] = scaler_function(seed_momentum[1], self.limit_theta, self.parameter_theta)
+        seed_momentum[2] = seed_momentum[2] / (2 * np.pi)
+        seed_momentum[3] = scaler_function(seed_momentum[3], self.limit_mass, self.parameter_mass)
+        """
+        loc1 = seed_momentum[0]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("energy below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("energy above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = seed_momentum[1]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("theta below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("theta above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = seed_momentum[2]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("phi below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("phi above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+
+        loc1 = seed_momentum[3]
+        if(loc1[loc1<0].size()[0] !=0):
+            print("mass below 0 in seed_momentum :{}".format(loc1[loc1<0].size()[0]))
+        if(loc1[loc1>1].size()[0] !=0):
+            print("mass above 1 in seed_momentum :{}".format(loc1[loc1>1].size()[0]))
+        """
+        if self.train_bool:
+            return {"label": sample["label"],
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": seed_momentum,
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "branching": branching,
+                    "mother_momenta": mother_momenta,
+                    "daughter_momenta": daughter_momenta
+                   }
+        else:
+            return {"label": sample["label"],
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": seed_momentum,
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "CSJets": sample["CSJets"],
+                    "CS_ID_mothers": sample["CS_ID_mothers"],
+                    "CS_ID_daugthers": sample["CS_ID_daugthers"],
+                    "branching": branching,
+                    "unscaled_branching": sample["unscaled_branching"],
+                    "mother_momenta": mother_momenta,
+                    "daughter_momenta": daughter_momenta
+                    }
+
+
+
 
 class GranulariseBranchings(object):
     """

@@ -28,7 +28,7 @@ from torchvision import transforms, utils
 from torch.utils.data import random_split
 
 from Utils import get_dictionary_cross_section
-from .JuniprDataset import JuniprDataset, PadTensors, FeatureScaling, GranulariseBranchings, AddExtraLabel
+from .JuniprDataset import JuniprDataset, PadTensors, FeatureScalingOwn, FeatureScalingJunipr, GranulariseBranchings, AddExtraLabel
 
 class DataLoader_Set4(_BaseDataLoader):
     def __init__(self, config: Dict) -> None:
@@ -63,13 +63,13 @@ class DataLoader_Set4(_BaseDataLoader):
             print("Start reading data for binary Junipr")
             # Set up the transforms to apply to the dataset
             train_pading = PadTensors(self.padding_size, self.padding_value, train_bool = True)
-            train_scaling = FeatureScaling(self.feature_scaling_params, train_bool = True)
+            train_scaling = FeatureScalingJunipr(self.feature_scaling_params, train_bool = True)
             train_onehot = GranulariseBranchings(self.granularity, train_bool = True)
             train_add_gluon_set = AddExtraLabel(0, train_bool = True)
             train_add_quark_set = AddExtraLabel(1, train_bool = True)
             
             test_pading = PadTensors(self.padding_size, self.padding_value, train_bool = False)
-            test_scaling = FeatureScaling(self.feature_scaling_params, train_bool = False)
+            test_scaling = FeatureScalingJunipr(self.feature_scaling_params, train_bool = False)
             test_onehot = GranulariseBranchings(self.granularity, train_bool = False)
             test_add_gluon_set = AddExtraLabel(0, train_bool = False)
             test_add_quark_set = AddExtraLabel(1, train_bool = False)
@@ -127,11 +127,11 @@ class DataLoader_Set4(_BaseDataLoader):
             #composed = transforms.Compose([scaling, onehot])
             
             train_pading = PadTensors(self.padding_size, self.padding_value, train_bool = True)
-            train_scaling = FeatureScaling(self.feature_scaling_params, train_bool = True)
+            train_scaling = FeatureScalingOwn(train_bool = True)
             train_onehot = GranulariseBranchings(self.granularity, train_bool = True)
 
             test_pading = PadTensors(self.padding_size, self.padding_value, train_bool = False)
-            test_scaling = FeatureScaling(self.feature_scaling_params, train_bool = False)
+            test_scaling = FeatureScalingOwn(train_bool = False)
             test_onehot = GranulariseBranchings(self.granularity, train_bool = False)
 
             # Compose these, beware of the order.
