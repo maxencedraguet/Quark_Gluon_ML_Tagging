@@ -34,6 +34,7 @@ class RecurrentNetwork(_BaseNetwork):
         Method to extract relevant parameters from config and make them attributes of this class
         dimensions should be a list of successive size.
         """
+        self.RNN_type = config.get(["Junipr_Model", "Structure", "Recurrent", "RNN_type"])
         self.input_size = config.get(["Junipr_Model", "Structure", "Recurrent", "input_dimensions"])
         self.hidden_size = config.get(["Junipr_Model", "Structure", "Recurrent", "hidden_dimensions"])
         self.initialisation = config.get(["Junipr_Model", "Structure", "Recurrent", "initialisation"]) #be sure it's Xavier Normal
@@ -44,20 +45,35 @@ class RecurrentNetwork(_BaseNetwork):
         Constructs the top element. PROBLEM: I cannot choose initialisaiton of weights: this is a hotly debated topic (SKIPPED FOR NOW)
         """
         #self.recurrent_network = self.initialise_weights(nn.Linear(self.input_size + self.hidden_size, self.hidden_size))
-        self.recurrent_network = nn.RNN(input_size = self.input_size,
-                                        hidden_size= self.hidden_size,
-                                        num_layers = 1,
-                                        nonlinearity = self.nonlinearity_name,
-                                        batch_first = True)
+        if self.RNN_type == "rnn":
+            self.recurrent_network = nn.RNN(input_size = self.input_size,
+                                            hidden_size= self.hidden_size,
+                                            num_layers = 1,
+                                            nonlinearity = self.nonlinearity_name,
+                                            batch_first = True)
+        elif self.RNN_type == "lstm":
+            self.recurrent_network = nn.LSTM(input_size = self.input_size,
+                                             hidden_size= self.hidden_size,
+                                             num_layers = 1,
+                                             batch_first = True)
+        else:
+            raise ValueError("RNN type {} not recognised". format(self.RNN_type))
 
-    def forward(self, input, hidden) -> torch.Tensor:
+    def forward(self, input, hidden, c_0 = None) -> torch.Tensor:
         """
-        Pass the inputs and the hidden through self.recurrent_network and applies the nonlinearity (typically tanh)s.
+        Pass the inputs and the hidden through self.recurrent_network and applies the nonlinearity (typically tanh).
         """
-        output, hidden  = self.recurrent_network(input, hidden) #note: nonlinearity inside the recurrent-network definition (how sweet?)
-        # Output contains all hidden states. Shape: seq_len, batch, num_directions * hidden_size
-        # hidden is the final hidden state.
-        return output, hidden
+        if self.RNN_type == "rnn":
+            output, hidden  = self.recurrent_network(input, hidden) #note: nonlinearity inside the recurrent-network definition (how sweet?)
+            # Output contains all hidden states. Shape: seq_len, batch, num_directions * hidden_size
+            # hidden is the final hidden state.
+            return output, hidden
+        else:
+            output, (hidden, _)  = self.recurrent_network(input, (hidden, c_0)) #note: nonlinearity inside the recurrent-network definition (how sweet?)
+            # Output contains all hidden states. Shape: seq_len, batch, num_directions * hidden_size
+            # hidden is the final hidden state.
+            return output, hidden
+
 
     def save_model(self, path) -> None:
         torch.save(self.state_dict(), os.path.join(path, 'saved_RNN_weights.pt'))

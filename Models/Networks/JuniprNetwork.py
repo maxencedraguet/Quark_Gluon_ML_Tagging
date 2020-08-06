@@ -42,9 +42,11 @@ class JuniprNetwork(_BaseNetwork):
         """
         # Whether to represent branch branch in 1 or 4 networks
         self.branch_treatment = config.get(["Junipr_Model", "Structure", "branch_structure"])
+        self.RNN_type = config.get(["Junipr_Model", "Structure", "Recurrent", "RNN_type"])
         
         # Need to know granularity to manipulate the branch output.
         self.granularity = config.get(["Junipr_Model", "Junipr_Dataset", "granularity"])
+    
     
     def setup_Model(self, config: Dict):
         """
@@ -55,6 +57,9 @@ class JuniprNetwork(_BaseNetwork):
         #thing = NeuralNetwork(source = "RecurrentInit", config=config)
         #self.seed_momenta_to_hidden_network =
         self.seed_momenta_to_hidden_network = NeuralNetwork(source = "RecurrentInit", config=config)
+        if self.RNN_type == "lstm":
+            self.seed_momenta_to_c0_network = NeuralNetwork(source = "RecurrentInit", config=config)
+        
         # We can then initiate the Recurrent Network (it's first hidden state will be the ouput of self.seed_momenta_to_hidden_network
         self.recurrent_network = RecurrentNetwork(config=config)
         
@@ -94,12 +99,18 @@ class JuniprNetwork(_BaseNetwork):
         daughters_momenta_PACK = rnn.pack_padded_sequence(daughters_momenta, n_branching, batch_first=True, enforce_sorted = False)
         # As a weird effect of interleaving the tensor entries (batch_sample1, batch_sample2, ... batch_sampleX, and again)
         
-        previous_hidden_states = self.seed_momenta_to_hidden_network(seed_momenta)
+        first_hidden_states = self.seed_momenta_to_hidden_network(seed_momenta)
         # Needs a dimension tweak
-        previous_hidden_states = previous_hidden_states[None, :, :]
-        #print("In junipr network, size of previous_hidden_states: {}".format(previous_hidden_states.size()))
-
-        hidden_states, last_hiddens = self.recurrent_network(daughters_momenta_PACK, previous_hidden_states)
+        first_hidden_states = first_hidden_states[None, :, :]
+        #print("In junipr network, size of first_hidden_states: {}".format(first_hidden_states.size()))
+        if self.RNN_type == "lstm":
+            first_c_states = self.seed_momenta_to_c0_network(seed_momenta)
+            first_c_states = first_c_states[None, :, :]
+        
+        if self.RNN_type == "lstm":
+            hidden_states, last_hiddens = self.recurrent_network(daughters_momenta_PACK, first_hidden_states, first_c_states)
+        else:
+            hidden_states, last_hiddens = self.recurrent_network(daughters_momenta_PACK, first_hidden_states)
         #print("\nIn junipr network, hidden output: {}\n".format(hidden_states))
         #print("In junipr network, last hidden output: {}".format(last_hiddens.size()))
         hidden_states, _ = rnn.pad_packed_sequence(hidden_states, batch_first=True)
@@ -115,12 +126,12 @@ class JuniprNetwork(_BaseNetwork):
         
         output_mother = self.p_mother_network(hidden_states)
         #print("In junipr network, output mother branch size: {}".format(output_mother.size()))
-        
-        # A small amount of processing is required for mother:
-        #   - there should only be as many considered entries as particles in the state.
-        # Multiply a lower triangular matrix with the output_mother tensor So that only the number of particles are activated
-        # WORK HERE
-        
+        # A small amount of processing is required for mother: there should only be as many considered entries as particles in the state.
+        # This can be easily done to the batch: just apply keep the lower triangular part (with diagonal) in a matrix such that batch, recurrence, feature.
+        output_mother = torch.tril(output_mother, diagonal = 0)
+        # To limit the softmax in the loss to the non-zero value (all zero-values are due to trim, absolutely unlikely for a value out of the trim to be null)
+        output_mother = torch.where(output_mother != 0, output_mother, torch.tensor([float('-inf')]))
+
         trimmed_padding_size = hidden_states.size()[1]
         # Branch
         #print("In junipr network, mother_momenta size: {}".format(mother_momenta.size()))

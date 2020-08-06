@@ -31,7 +31,7 @@ import tensorflow as tf
 from DataLoaders import DataLoader_Set4
 from .BaseRunner import _BaseRunner
 from .Networks import JuniprNetwork
-from Utils import tree_plotter, draw_tree
+from Utils import tree_plotter, draw_tree, write_ROC_info, plot_confusion_matrix, ROC_curve_plotter_from_values, write_to_file
 from Utils import MainParameters
 
 class JuniprRunner(_BaseRunner):
@@ -42,14 +42,35 @@ class JuniprRunner(_BaseRunner):
         self.setup_dataloader(config)
         if self.binary_junipr:
             print("Running a binary version of JUNIPR")
+            # training a binary version of junipr. This will require loading two pre-trained models and saving these double models.
+            self.previously_trained_number_epoch = config.get(["Junipr_Model", "binary_runner", "pre_trained_epochs"])
+            quark_model_path  = config.get(["Junipr_Model", "binary_runner", "quark_model_path"])
+            quark_config_path = config.get(["Junipr_Model", "binary_runner", "quark_config_path"])
+            
+            gluon_model_path  = config.get(["Junipr_Model", "binary_runner", "gluon_model_path"])
+            gluon_config_path = config.get(["Junipr_Model", "binary_runner", "gluon_config_path"])
+            
+            print("The quark model comes from {}".format(quark_model_path))
+            print("The gluon model comes from {}".format(gluon_model_path))
+            with open(quark_config_path, 'r') as yaml_file_quark:
+                quark_loaded_parameters = yaml.load(yaml_file_quark, yaml.SafeLoader)
+            with open(gluon_config_path, 'r') as yaml_file_gluon:
+                gluon_loaded_parameters = yaml.load(yaml_file_gluon, yaml.SafeLoader)
+        
+            quark_additional_parameters = MainParameters(quark_loaded_parameters)
+            gluon_additional_parameters = MainParameters(gluon_loaded_parameters)
+            
+            self.JUNIPR_quark_model = JuniprNetwork(config=quark_additional_parameters)
+            self.JUNIPR_gluon_model = JuniprNetwork(config=gluon_additional_parameters)
+            self.JUNIPR_quark_model.load_model(quark_model_path)
+            self.JUNIPR_gluon_model.load_model(gluon_model_path)
             if self.train_bool:
                 print("Training the binary Junipr model")   # remark that in this case there must be a loading step
                 self.writer = SummaryWriter(self.result_path) # A tensorboard writer
                 self.run(config, train_bool = True, save_model_bool = self.save_model_bool , binary_junipr_bool = True)
             if self.assess_bool:
-                print("self.assess_bool: ", self.assess_bool)
                 print("Assessing the binary Junipr model")
-                self.run(config, print_jets_bool = True, binary_junipr_bool = True)
+                self.run(config, assess_bool = True, print_jets_bool = True, binary_junipr_bool = True)
         else:
             if self.load_bool:
                 print("Loading a Junipr model")
@@ -60,7 +81,7 @@ class JuniprRunner(_BaseRunner):
                 self.run(config, train_bool = True, save_model_bool = self.save_model_bool)
             if self.assess_bool:
                 print("Assessing the Junipr model")
-                self.run(config, print_jets_bool = True)
+                self.run(config, assess_bool = True, print_jets_bool = True)
             
         print("\nFinished running the JUNIPR Runner\n")
                   
@@ -73,6 +94,7 @@ class JuniprRunner(_BaseRunner):
         self.experiment_timestamp = config.get("experiment_timestamp")
         self.absolute_data_path = config.get(["absolute_data_path"])
         self.result_path = config.get(["log_path"])
+        self.logger_data_bool = config.get(["logger_data"])
         os.makedirs(self.result_path, exist_ok=True)
         self.dataset = config.get(["dataset"])
         self.seed = config.get(["seed"])
@@ -85,16 +107,22 @@ class JuniprRunner(_BaseRunner):
         self.binary_junipr = config.get(["Junipr_Model", "binary_runner_bool"]) # whether to run a binary version of junipr. Requires two pre-trained models.
         
         self.lr = config.get(["Junipr_Model", "lr"])
-        #self.lr_scheduler = config.get(["Junipr_Model", "lr_scheduler"])
+        self.lr_scheduler = config.get(["Junipr_Model", "lr_scheduler"])
+        self.batch_scheduler = config.get(["Junipr_Model", "batch_scheduler"])
         self.num_epochs = config.get(["Junipr_Model", "epoch"])
         self.batch_size = config.get(["Junipr_Model", "batch_size"])
         self.test_frequency = config.get(["Junipr_Model", "test_frequency"])
         self.optimiser_type = config.get(["Junipr_Model", "optimiser", "type"])
-        self.optimiser_params = config.get(["Junipr_Model", "optimiser", "params"])
+        #self.optimiser_params = config.get(["Junipr_Model", "optimiser", "params"])
 
         self.branch_treatment = config.get(["Junipr_Model", "Structure", "branch_structure"])    # Whether to represent branch branch in 1 or 4 networks
         self.padding_size = config.get(["Junipr_Model", "Junipr_Dataset", "padding_size"])
         self.padding_value= config.get(["Junipr_Model", "Junipr_Dataset", "padding_value"])
+    
+        # Next parameter is used when further training a model (and modified in loading step of run), to restart at the last epoch trained (import for schedule).
+        # The model will still be trained for the num_epochs given (it will be added to the current value so that the model will have globally trained
+        # for previously_trained_number_epoch + self.num_epochs.
+        self.previously_trained_number_epoch = 0
 
     def setup_Model(self, config: Dict):
         """
@@ -117,43 +145,64 @@ class JuniprRunner(_BaseRunner):
         bool_suffle_test = False
         if self.binary_junipr and self.assess_bool:
             # Running a binary junipr and assessing it.
-            # You have to shuffle the test in this case as otherwise you'll only see the x first jets
-            # which will be msotly quark if not only them.
+            # You have to shuffle the test in this case as otherwise you'll only draw the x first jets
+            # which will be mostly quark if not only them.
             bool_suffle_test = True
-        self.train_dataloader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        self.train_dataloader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)#, num_workers=4)
         self.validation_dataloader = torch.utils.data.DataLoader(self.validation_dataset, batch_size=self.batch_size, shuffle=False)
         self.test_dataloader  = torch.utils.data.DataLoader(self.test_dataset, batch_size=1, shuffle=bool_suffle_test)
 
+    def reset_dataloader(self, new_batchsize, epoch):
+        """
+        This is used to change the batchsize of the train dataloader (to change before iterating over it)
+        """
+        print("\n#######################################################\n")
+        print("Epoch {} | New batch size : {}".format(epoch, new_batchsize) )
+        print("\n#######################################################\n")
+        self.batch_size = new_batchsize
+        self.train_dataloader = torch.utils.data.DataLoader(self.train_dataset, batch_size=new_batchsize, shuffle=True)
+
     def setup_optimiser(self, binary_case = False):
         if self.optimiser_type == "adam":
+            """
+            # Not specifying them at the moment
             beta_1 = self.optimiser_params[0]
             beta_2 = self.optimiser_params[1]
             epsilon = self.optimiser_params[2]
+            """
             if binary_case:
-                self.optimiser = torch.optim.Adam(list(self.JUNIPR_quark_model.parameters()) + list(self.JUNIPR_gluon_model.parameters()), lr=self.lr,
-                                                  betas=(beta_1, beta_2),eps=epsilon)
+                self.optimiser = torch.optim.Adam(list(self.JUNIPR_quark_model.parameters()) + list(self.JUNIPR_gluon_model.parameters()), lr=self.lr)#,betas=(beta_1, beta_2),eps=epsilon)
             else:
-                self.optimiser = torch.optim.Adam(self.JUNIPR_model.parameters(), lr=self.lr,
-                                                  betas=(beta_1, beta_2),eps=epsilon) #weight_decay= self.weight_decay
+                self.optimiser = torch.optim.Adam(self.JUNIPR_model.parameters(), lr=self.lr)#,betas=(beta_1, beta_2),eps=epsilon) #weight_decay= self.weight_decay
         else:
             raise ValueError("Optimiser {} not recognised". format(self.optimiser_type))
                 
-        """
-        # This needs work: it is to adapt the learning rate in training
+        
+        # Learning rate schedule
         self.lr_scheduler_bool = False
-        if self.lr_scheduler == "own":
+        if self.lr_scheduler == "5epochsJ":  # same as in main JUNIPR paper
             self.lr_scheduler_bool = True
-            self.lr_schedule = {"" }
-        """
-        """
-        # This needs work: it is to adapt the batchsize in training
+            self.lr_schedule = {"1": 0.01, "6": 0.001, "11": 0.0001, "16": 0.001, "21": 0.0001, "26": 0.00001}
+        elif self.lr_scheduler == "5epochsJL":  # same as in main JUNIPR paper but longer
+            self.lr_scheduler_bool = True
+            self.lr_schedule = {"1": 0.01, "6": 0.001, "11": 0.001, "16": 0.0001, "21": 0.0001, "26": 0.001, "31": 0.001, "36": 0.0001, "41": 0.00001, "46": 0.00001}
+        elif self.lr_scheduler == "5epochsD":  # straight down schedule
+            self.lr_scheduler_bool = True
+            self.lr_schedule = {"1": 0.01, "6": 0.005, "11": 0.001, "16": 0.0005, "21": 0.0001, "26": 0.00001}
+        elif self.lr_scheduler == "5epochsDL":  # longer schedule for 50 epochs
+            self.lr_scheduler_bool = True
+            self.lr_schedule = {"1": 0.01, "6": 0.005, "11": 0.001, "16": 0.001, "21": 0.001, "26": 0.001, "31": 0.0005, "36": 0.0005, "41": 0.00001, "46": 0.00001}
+
+        # Batch size  schedule
         self.batchsize_scheduler_bool = False
-        if self.batchsize_scheduler == "junipr_paper":
+        if self.batch_scheduler == "junipr_paper_binary":
             self.batchsize_scheduler_bool = True
-            # keys indicate the epoch at which the value is to be set as batchsize.
             self.batchsize_schedule = {"1": 10, "2": 100, "7": 1000, "17": 2000 }
-        """
-                
+        elif self.batch_scheduler == "junipr_unary_LONG":
+            self.batchsize_scheduler_bool = True
+                #self.batchsize_schedule = {"1": 10, "26": 100}
+            self.batchsize_schedule = {"1": 2, "26": 4}
+
     def setup_loss(self):
         """
         Gives the class a dictionnary of loss functions (for each of the three/six modules) in self.loss_modules
@@ -190,12 +239,12 @@ class JuniprRunner(_BaseRunner):
         self.loss_p_branch_d  = nn.CrossEntropyLoss(reduction = 'none')
         self.loss_modules["p_branch_d"] = self.loss_p_branch_d
         
-        """
         if self.binary_junipr:
             # Again, the BCEWithLogitsLoss will perform the sigmoid itself
+            self.binary_with_loss = True
             self.discriminator  = nn.BCEWithLogitsLoss(reduction = 'none')
             self.loss_modules["discriminator"] = self.discriminator
-        """
+
     def compute_losses(self, batch_input, batch_output, test_bool = False, binary_target = False):
         """
         To compute the loss in our batch-leaning environment: the sequences are flatten into an array.
@@ -261,7 +310,6 @@ class JuniprRunner(_BaseRunner):
             
             #in_loop_unary_loss_first_trim = time.process_time()
             #print("Loss Loop: first trim {}".format(in_loop_unary_loss_first_trim - in_loop_unary_loss))
-            
             p_mother_output_loss   = self.loss_modules["p_mother"](element_output_mother, element_input_mother_id.long())
             p_end_output_loss      = self.loss_modules["p_end"](element_output_end[:, 0], element_input_ending[:, 0])
             p_very_end_output_loss = self.loss_modules["p_end"](element_output_very_end, element_input_very_ending)
@@ -276,26 +324,24 @@ class JuniprRunner(_BaseRunner):
             list_losses = [p_mother_output_loss, p_end_output_loss, p_very_end_output_loss, p_branch_z_output_loss,
                            p_branch_t_output_loss, p_branch_p_output_loss, p_branch_d_output_loss]
             
-            losses_combined = torch.cat(list_losses, dim = 0).sum(dim=0) #/ element_n_branching  # no division: the whole thing is going to be a probability.
+            losses_combined = torch.cat(list_losses, dim = 0).sum(dim=0)
             #print("In loop loss, does losses_combined required grad ? {}".format(losses_combined.requires_grad))
             #in_loop_unary_loss_loss_compiled = time.process_time()
             #print("Loss Loop: loss compiled {}".format(in_loop_unary_loss_loss_compiled - in_loop_unary_loss_loss_computed))
             
             if test_bool:
-                print("In test ?")
                 batch_element_loss_list = list()
                 for node_counter in range(element_n_branching):
                     node_probability = p_mother_output_loss[node_counter] + p_end_output_loss[node_counter] +p_branch_z_output_loss[node_counter] + p_branch_t_output_loss[node_counter] + p_branch_p_output_loss[node_counter] + p_branch_d_output_loss[node_counter]
                 
                     node_probability = node_probability.item()
                     batch_element_loss_list.append(node_probability)
-                list_probabilities_per_jet.append( (losses_combined, batch_element_loss_list) )
+                list_probabilities_per_jet.append( (float(losses_combined), batch_element_loss_list) )
                                                   
             batch_loss += losses_combined
             if binary_target:
                 batch_loss_tensor[batch_element] = losses_combined
                     #print("The loss {} and what is saved {}".format(losses_combined, batch_loss_tensor[batch_element]))
-        
         
             #print("In junipr runner loss module compute, global loss : {}".format(losses_combined))
             #in_loop_unary_loss_end = time.process_time()
@@ -303,13 +349,14 @@ class JuniprRunner(_BaseRunner):
         #end_loop_unary_loss = time.process_time()
         #print("time to end the loop in unary loss {}".format(end_loop_unary_loss - before_loop_unary_loss))
         if test_bool:
+            if binary_target:
+                 return batch_loss_tensor, list_probabilities_per_jet
             return float(batch_loss), list_probabilities_per_jet
         if binary_target:
-            #print(batch_loss_tensor)
             return batch_loss_tensor
         return batch_loss
     
-    def compute_binary_losses(self, batch_input, batch_output_quark, batch_output_gluon, detail_loss = False):
+    def compute_binary_losses(self, batch_input, batch_output_quark, batch_output_gluon, test_loss = False, detail_loss = False):
         """
         To compute the binary loss in our batch-leaning environment: the sequences are flatten into an array.
           
@@ -333,16 +380,27 @@ class JuniprRunner(_BaseRunner):
         _, list_proba_quark = self.compute_losses(batch_input = batch_input, batch_output = batch_output_quark, test_bool = True)
         _, list_proba_gluon = self.compute_losses(batch_input = batch_input, batch_output = batch_output_gluon, test_bool = True)
         """
-        #start_q_loss = time.process_time()
-        #print("time to quark loss {}".format(start_q_loss - start_loss))
-        tensor_proba_quark = self.compute_losses(batch_input = batch_input, batch_output = batch_output_quark, binary_target = True)
-        #start_g_loss = time.process_time()
-        #print("time to do quark loss {}".format(start_g_loss - start_q_loss))
-        tensor_proba_gluon = self.compute_losses(batch_input = batch_input, batch_output = batch_output_gluon, binary_target = True)
-        #finish_g_loss = time.process_time()
-        #print("time to do gluon loss {}".format(finish_g_loss - start_g_loss))
         
-        prediction_label = torch.tensor(np.zeros((size_batch, 1)), requires_grad=False)
+        if detail_loss:
+            tensor_proba_quark, list_proba_quark = self.compute_losses(batch_input = batch_input, batch_output = batch_output_quark, test_bool = True, binary_target = True)
+            tensor_proba_gluon, list_proba_gluon = self.compute_losses(batch_input = batch_input, batch_output = batch_output_gluon, test_bool = True, binary_target = True)
+        
+        else:
+            #start_q_loss = time.process_time()
+            #print("time to quark loss {}".format(start_q_loss - start_loss))
+            tensor_proba_quark = self.compute_losses(batch_input = batch_input, batch_output = batch_output_quark, binary_target = True)
+            #start_g_loss = time.process_time()
+            #print("time to do quark loss {}".format(start_g_loss - start_q_loss))
+            tensor_proba_gluon = self.compute_losses(batch_input = batch_input, batch_output = batch_output_gluon, binary_target = True)
+            #finish_g_loss = time.process_time()
+            #print("time to do gluon loss {}".format(finish_g_loss - start_g_loss))
+        
+        if test_loss:
+            prediction_label = 0
+            t_label = 0
+            u_label = 0
+        else:
+            prediction_label = torch.tensor(np.zeros((size_batch, 1)), requires_grad=False)
         
         detail_list_proba = list()
             #for indice in range(len(list_proba_quark)):
@@ -356,44 +414,66 @@ class JuniprRunner(_BaseRunner):
                 # how to deal with mis classified labels from the testing set ?
                 # In this scenario, if such jets are present, consider the label to be the dataset enriched one (quark or gluon).
                 used_label = dataset_jet
+            used_label = torch.FloatTensor([used_label]).detach()
             
-            """
-            tuple_proba_quark = list_proba_quark[indice].item()
-            tuple_proba_gluon = list_proba_gluon[indice].item()
+            if detail_loss:
+                tuple_proba_quark = list_proba_quark[indice]
+                tuple_proba_gluon = list_proba_gluon[indice]
+
+                _, proba_quark_per_nodes = tuple_proba_quark
+                _, proba_gluon_per_nodes = tuple_proba_gluon
             
-            proba_quark, proba_quark_per_nodes = tuple_proba_quark
-            proba_gluon, proba_gluon_per_nodes = tuple_proba_gluon
-            """
-            proba_quark = tensor_proba_quark[indice]
-            proba_gluon = tensor_proba_gluon[indice]
+            if test_loss:
+                proba_quark = torch.tensor([tensor_proba_quark.item()])
+                proba_gluon = torch.tensor([tensor_proba_gluon.item()])
+                
+            else:
+                proba_quark = tensor_proba_quark[indice]
+                proba_gluon = tensor_proba_gluon[indice]
             
             # The following is for supervised learning.
             #prediction_loss = self.loss_modules["discriminator"](-proba_quark + proba_gluon, used_label.long())
             
             # The following for semi-supervised learning: maximise the likelihood ratio itself, with the sign depending on the label
             # We use a sigmoid to make the loss smooth.
-            if used_label == 1:
-                proba = torch.sigmoid(proba_quark - proba_gluon) #the real probability: take a minus in front of the proba of self.compute_losses. However, we want to maximise the result of the sigmoid, meaning  - the sigmoid.
-                #proba = proba_quark - proba_gluon
+            if self.binary_with_loss:
+                proba_ratio = - proba_quark + proba_gluon # we need to compute the real proba ration and use this on the discriminator.
+                proba = self.loss_modules["discriminator"](proba_ratio, used_label)
             else:
-                proba = torch.sigmoid(-proba_quark + proba_gluon)
+                if used_label == 1:
+                    proba = torch.sigmoid(proba_quark - proba_gluon) #the real probability: take a minus in front of the proba of self.compute_losses. However, we want to maximise the result of the sigmoid, meaning  - the sigmoid.
+                    #proba = proba_quark - proba_gluon
+                else:
+                    proba = torch.sigmoid(-proba_quark + proba_gluon)
+                    #proba = -proba_quark + proba_gluon
             #print("proba_quark {}, proba_gluon {} and proba {} for used_label {}".format(proba_quark, proba_gluon, proba, used_label))
             batch_loss += proba
 
             # Predict a label based on the ratio test. Need to put - as proba_quark and proba_gluon are the -log(proba)
-            prediction = torch.round(torch.sigmoid(-proba_quark + proba_gluon)).item()
-            prediction_label[indice] = prediction
-            if prediction == used_label:
-                correct_count += 1
+            if test_loss:
+                prediction = torch.sigmoid(-proba_quark + proba_gluon).item()
+                prediction_label = prediction
+                t_label = true_ID_jet
+                u_label = used_label
+            else:
+                prediction = torch.round(torch.sigmoid(-proba_quark + proba_gluon)).item()
+                prediction_label[indice] = prediction
+                if prediction == used_label:
+                    correct_count += 1
 
             if detail_loss:
                 ratio_proba = list()
                 for node in range(len(proba_quark_per_nodes)):
-                    ratio_proba.append(proba_quark_per_nodes[node] - proba_gluon_per_nodes[node])
-                detail_list_proba.append((proba, ratio_proba))
+                    ratio_proba.append(-proba_quark_per_nodes[node] + proba_gluon_per_nodes[node])
+                detail_list_proba.append((proba_ratio, ratio_proba))
         #end_loop_loss = time.process_time()
         #print("time to do the loop loss {}".format(end_loop_loss - start_loop_loss))
-        accuracy = correct_count / dataset_label.size()[0]
+        if test_loss:
+            # for test, the batch size is 1
+            accuracy = (prediction_label, u_label, t_label)
+        else:
+            # rough idea of what the accuracy is
+            accuracy = correct_count / dataset_label.size()[0]
 
         return batch_loss, detail_list_proba, accuracy
                   
@@ -406,57 +486,103 @@ class JuniprRunner(_BaseRunner):
         self.JUNIPR_model.train()
         step_count = 0
         
-        for epoch in range(1, self.num_epochs + 1):
+        # This part sets up some logging information for later plots.
+        if self.logger_data_bool:
+            # initiate the logger
+            write_to_file(os.path.join(self.result_path, "logger_info.txt"), ["#step", "train_loss", "test_loss"], action = 'w')
+            write_to_file(os.path.join(self.result_path, "saved_info.txt"), ["#epoch", "step"], action = 'w')
+                
+        time_start_sequence = time.process_time()
+        #torch.backends.cudnn.benchmark = True
+        last_epoch_base_5 = str(0)
+        for epoch in range(1 + self.previously_trained_number_epoch, self.num_epochs + 1 + self.previously_trained_number_epoch):
             epoch_loss = 0
             batch_count = 0
+            
+            # If a batchsize schedule is used:
+            if self.batchsize_scheduler_bool:
+                if str(epoch) in self.batchsize_schedule:
+                    self.reset_dataloader(self.batchsize_schedule[str(epoch)], epoch)
+            
             # If a learning rate schedule is used:
+            if self.lr_scheduler_bool:
+                if str(epoch) in self.lr_schedule:
+                    self.lr = self.lr_schedule[str(epoch)]
+                    print("\n#######################################################\n")
+                    print("Epoch {} | New learning rate : {}".format(epoch, self.lr))
+                    print("\n#######################################################\n")
+                    # Update the learning rate parameter of the optimiser.
+                    for param_group in self.optimiser.param_groups:
+                        param_group['lr'] = self.lr
             """
-            if self.lr_scheduler:
-                if (epoch == int((self.num_epochs + 1)/3) or epoch == int((self.num_epochs + 1)/3)*2):
-                    self.lr *= 0.5
-                        print("Learning Rate schedule: ", self.lr)
+            # More general version that would work even if retraining mid range (so if at epoch 14, would know to take lr of epoch 11). For retraining purposes
+            if self.lr_scheduler_bool:
+                closest_epoch_base_5 = str((epoch - epoch % 5)+1)
+                if closest_epoch_base_5 != last_epoch_base_5:
+                    last_epoch_base_5 = closest_epoch_base_5
+                    if closest_epoch_base_5 in self.lr_schedule:        # don't do anything if you leave the range, hence the else.
+                        self.lr = self.lr_schedule[closest_epoch_base_5]
+                        print("\n#######################################################\n")
+                        print("Epoch {} | New learning rate : {}".format(epoch, self.lr))
+                        print("\n#######################################################\n")
                         # Update the learning rate parameter of the optimiser.
                         for param_group in self.optimiser.param_groups:
                             param_group['lr'] = self.lr
+                    else:
+                        # you've reached the end of the range of lr_scheduler, deactive the modifier
+                        self.lr_scheduler_bool = False
             """
-            time_start_load = time.process_time()
-            time_finish_load = 0
+            
+            #time_start_load = time.process_time()
+            #time_finish_load = 0
             for batch_input in self.train_dataloader:
-                time_finish_load = time.process_time()
-                print("time to load batches {}".format(time_finish_load - time_start_load))
+                #time_finish_load = time.process_time()
+                #print("time to load batches {}".format(time_finish_load - time_start_load))
                 step_count += 1
-                batch_count += 1
-                very_start = time.process_time()
-                print("Starting step {}".format(step_count))
+                
+                #very_start = time.process_time()
+                #print("Starting step {}".format(step_count))
                 input_n_branchings = batch_input["n_branchings"]
+                
                 size_batch = input_n_branchings.size()[0]
+                batch_count += size_batch
                 
                 batch_output = self.JUNIPR_model(batch_input)
-                to_loss_time = time.process_time()
-                print("Time to reach loss step {}".format(to_loss_time - very_start))
+                #to_loss_time = time.process_time()
+                #print("Time to reach loss step {}".format(to_loss_time - very_start))
                 batch_loss = self.compute_losses(batch_input, batch_output) / size_batch
-                loss_time = time.process_time()
-                print("Time to compute loss step {}".format(loss_time - to_loss_time))
-                epoch_loss += float(batch_loss)
+                #loss_time = time.process_time()
+                #print("Time to compute loss step {}".format(loss_time - to_loss_time))
+                epoch_loss += float(batch_loss * size_batch)
                 
                 self.optimiser.zero_grad()
                 batch_loss.backward()
                 self.optimiser.step()
-                print("Time to backprop loss step {}".format(time.process_time() - loss_time))
-                print("Finished step {} |Time for whole step {}".format(step_count, time.process_time() - very_start))
-                if (step_count% self.test_frequency == 0):
+                #print("Time to backprop loss step {}".format(time.process_time() - loss_time))
+                #print("Finished step {} |Time for whole step {}".format(step_count, time.process_time() - very_start))
+                if (int(step_count* self.batch_size) % int(self.test_frequency * 200) == 0):
                     print("Training {} step | batch loss : {}".format(step_count, float(batch_loss)))
                     # Report result to TensorBoard
                     self.writer.add_scalar("training_loss", float(batch_loss), step_count)
-                    self.test_loop(step=step_count)
+                    test_loss = self.test_loop(step=step_count)
+                    time_end_sequence = time.process_time()
+                    print("Time it took for the sequence: {}".format(time_end_sequence - time_start_sequence))
+                    if self.logger_data_bool:
+                        # append to the logger
+                        write_to_file(os.path.join(self.result_path, "logger_info.txt"), [step_count, float(batch_loss), test_loss], action = 'a', limit_decimal = True)
+                        
                     self.JUNIPR_model.train()
-                time_start_load = time.process_time()
+                    time_start_sequence = time.process_time()
+                #time_start_load = time.process_time()
             if (epoch % 5 == 0 and self.save_model_bool):
                 self.JUNIPR_model.save_model(self.result_path)
+                if self.logger_data_bool:
+                    # append to the logger to confirm the last updates
+                    write_to_file(os.path.join(self.result_path, "saved_info.txt"), [epoch, step_count], action = 'a')
             print("\n#######################################################\n")
             print("Epoch {} | loss : {}".format(epoch, epoch_loss/batch_count))
             print("\n#######################################################\n")
-
+                        
     def binary_train(self):
         """
         A binary trainer. Requires one model for quarks and another one for gluons.
@@ -468,12 +594,34 @@ class JuniprRunner(_BaseRunner):
         
         step_count = 0
         
+        # This part sets up some logging information for later plots.
+        if self.logger_data_bool:
+            # initiate the logger
+            write_to_file(os.path.join(self.result_path, "logger_info.txt"), ["#step", "train_loss", "test_loss", "train_acc", "test_acc"], action = 'w')
+            write_to_file(os.path.join(self.result_path, "saved_info.txt"), ["#epoch", "step"], action = 'w')
+        
         torch.backends.cudnn.benchmark = True
         time_start_sequence = time.process_time()
-        for epoch in range(1, self.num_epochs + 1):
+        for epoch in range(1 + self.previously_trained_number_epoch, self.num_epochs + 1 + self.previously_trained_number_epoch):
             epoch_loss = 0
             batch_count = 0
+        
+            # If a batchsize schedule is used:
+            if self.batchsize_scheduler_bool:
+                if str(epoch) in self.batchsize_schedule:
+                    self.reset_dataloader(self.batchsize_schedule[str(epoch)], epoch)
             
+            # If a learning rate schedule is used:
+            if self.lr_scheduler_bool:
+                if str(epoch) in self.lr_schedule:
+                    self.lr = self.lr_schedule[str(epoch)]
+                    print("\n#######################################################\n")
+                    print("Epoch {} | New learning rate : {}".format(epoch, self.lr))
+                    print("\n#######################################################\n")
+                    # Update the learning rate parameter of the optimiser.
+                    for param_group in self.optimiser.param_groups:
+                        param_group['lr'] = self.lr
+        
             #time_start_load = time.process_time()
             #time_finish_load = 0
             for batch_input in self.train_dataloader:
@@ -486,7 +634,7 @@ class JuniprRunner(_BaseRunner):
                 
                 input_n_branchings = batch_input["n_branchings"]
                 size_batch = input_n_branchings.size()[0]
-        
+                raise ValueError("end")
                 batch_output_quark = self.JUNIPR_quark_model(batch_input)
                 #print("Going in gluon")
                 batch_output_gluon = self.JUNIPR_gluon_model(batch_input)
@@ -498,13 +646,13 @@ class JuniprRunner(_BaseRunner):
                 #batch_loss = batch_loss / size_batch
                 #loss_time = time.process_time()
                 #print("Time to compute loss step {}".format(loss_time - to_loss_time))
-        
+                
+                batch_loss = batch_loss / size_batch
                 self.optimiser.zero_grad()
                 batch_loss.backward()
                 self.optimiser.step()
-                
-                batch_loss = batch_loss.item() / size_batch
-                epoch_loss += batch_loss
+    
+                epoch_loss += float(batch_loss)
                 
                 #print("Time to finish backprop loss step {}".format(time.process_time() - loss_time))
                 #print("Finished step {} |Time for whole step {}".format(step_count, time.process_time() - very_start))
@@ -512,12 +660,15 @@ class JuniprRunner(_BaseRunner):
                 #print("Training {} step | batch loss : {} | accuracy : {}".format(step_count, batch_loss, accuracy_batch))
 
                 if (step_count % self.test_frequency == 0):
-                    print("Training {} step | batch loss : {} | accuracy : {}".format(step_count, batch_loss, accuracy_batch))
+                    print("Training {} step | batch loss : {} | accuracy : {}".format(step_count, float(batch_loss), float(accuracy_batch)))
                     # Report result to TensorBoard
                     self.writer.add_scalar("training_loss", float(batch_loss), step_count)
-                    self.binary_test_loop(step=step_count)
+                    test_loss, test_acc = self.binary_test_loop(step=step_count)
                     time_end_sequence = time.process_time()
                     print("Time it took for the sequence: {}".format(time_end_sequence - time_start_sequence))
+                    if self.logger_data_bool:
+                        # append to the logger
+                        write_to_file(os.path.join(self.result_path, "logger_info.txt"), [step_count, float(batch_loss), test_loss, float(accuracy_batch), test_acc], action = 'a', limit_decimal = True)
                     self.JUNIPR_quark_model.train()
                     self.JUNIPR_gluon_model.train()
                     time_start_sequence = time.process_time()
@@ -525,6 +676,9 @@ class JuniprRunner(_BaseRunner):
             if (epoch % 1 == 0 and self.save_model_bool):
                 self.JUNIPR_quark_model.save_model(os.path.join(self.result_path, "quark_model"))
                 self.JUNIPR_gluon_model.save_model(os.path.join(self.result_path, "gluon_model"))
+                if self.logger_data_bool:
+                    # append to the logger to confirm the last updates
+                    write_to_file(os.path.join(self.result_path, "saved_info.txt"), [epoch, step_count], action = 'a')
             print("\n#######################################################\n")
             print("Epoch {} | loss : {}".format(epoch, epoch_loss/batch_count))
             print("\n#######################################################\n")
@@ -551,7 +705,7 @@ class JuniprRunner(_BaseRunner):
                 batch_output_gluon = self.JUNIPR_gluon_model(batch_input)
                 
                 batch_loss, _, accuracy = self.compute_binary_losses(batch_input, batch_output_quark, batch_output_gluon)
-                output_loss += batch_loss 
+                output_loss += batch_loss
                 output_accuracy += accuracy * size_batch
                 """
                 if batch_count == index:
@@ -564,7 +718,8 @@ class JuniprRunner(_BaseRunner):
             
             print("Validation {} step | mean loss = {} | mean accuracy = {}".format(step, float(mean_loss), float(mean_accuracy)))
             self.writer.add_scalar("validation_loss", float(mean_loss), step)
-                  
+        return mean_loss, mean_accuracy
+
     def test_loop(self, step:int):
         self.JUNIPR_model.eval()
         """
@@ -593,6 +748,7 @@ class JuniprRunner(_BaseRunner):
                   
             print("Validation {} step | loss = {}".format(step, float(mean_loss)))
             self.writer.add_scalar("validation_loss", float(mean_loss), step)
+        return mean_loss
 
     def log_jet_constructed(self, event_input, event_probability_list, step=0, path = None, tensorboard_logger_bool = True, binary_junipr_bool = False):
         """
@@ -623,7 +779,7 @@ class JuniprRunner(_BaseRunner):
             figure = tree_plotter(information_dictionary, path = path, segment_size = 2.0, return_plt_bool = False)
 
 
-    def run(self, config, train_bool = False, load_bool = False, print_jets_bool = False, save_model_bool = False, binary_junipr_bool = False):
+    def run(self, config, train_bool = False, load_bool = False, assess_bool = False, print_jets_bool = False, save_model_bool = False, binary_junipr_bool = False):
         """
         The centre of the Junipr Runner. Runs the operations required by the configuration
         """
@@ -634,47 +790,41 @@ class JuniprRunner(_BaseRunner):
                   self.JUNIPR_model.save_model(self.result_path)
                   
         elif train_bool and binary_junipr_bool:
-            # training a binary version of junipr. This will require loading two pre-trained models and saving these double models.
-            quark_model_path  = config.get(["Junipr_Model", "binary_runner", "quark_model_path"])
-            quark_config_path = config.get(["Junipr_Model", "binary_runner", "quark_config_path"])
-                  
-            gluon_model_path  = config.get(["Junipr_Model", "binary_runner", "gluon_model_path"])
-            gluon_config_path = config.get(["Junipr_Model", "binary_runner", "gluon_config_path"])
-            
-            print("The quark model comes from {}".format(quark_model_path))
-            print("The gluon model comes from {}".format(gluon_model_path))
-            with open(quark_config_path, 'r') as yaml_file_quark:
-                quark_loaded_parameters = yaml.load(yaml_file_quark, yaml.SafeLoader)
-            with open(gluon_config_path, 'r') as yaml_file_gluon:
-                gluon_loaded_parameters = yaml.load(yaml_file_gluon, yaml.SafeLoader)
-                  
-            quark_additional_parameters = MainParameters(quark_loaded_parameters)
-            gluon_additional_parameters = MainParameters(gluon_loaded_parameters)
-                  
-            self.JUNIPR_quark_model = JuniprNetwork(config=quark_additional_parameters)
-            self.JUNIPR_gluon_model = JuniprNetwork(config=gluon_additional_parameters)
-            self.JUNIPR_quark_model.load_model(quark_model_path)
-            self.JUNIPR_gluon_model.load_model(gluon_model_path)
-            
             self.JUNIPR_quark_model.train()
             self.JUNIPR_gluon_model.train()
             
             self.setup_loss()
             self.setup_optimiser(binary_case = True)
-                  
-            self.binary_train()
             
             if save_model_bool:
                 quark_additional_parameters.save_configuration(os.path.join(self.result_path, "quark_model"))
                 gluon_additional_parameters.save_configuration(os.path.join(self.result_path, "gluon_model"))
+                  
+            self.binary_train()
+            
+            if save_model_bool:
                 self.JUNIPR_quark_model.save_model(os.path.join(self.result_path, "quark_model"))
                 self.JUNIPR_gluon_model.save_model(os.path.join(self.result_path, "gluon_model"))
-                self.JUNIPR_model.save_model(self.result_path)
                 
         if load_bool:
-            model_path  = config.get(["Junipr_Model", "load_model_path"])
-            config_path = config.get(["Junipr_Model", "load_model_config"])
             # there should be a config file and the model parameters stored at that model_path
+            model_path  = config.get(["Junipr_Model", "loading", "load_model_path"])
+            config_path = config.get(["Junipr_Model", "loading", "load_model_config"])
+            self.previously_trained_number_epoch = config.get(["Junipr_Model", "loading", "pre_trained_epochs"])
+            
+            if self.lr_scheduler_bool:
+                keys_lr_schedule = np.array(list(self.lr_schedule.keys()), int)
+                if len(keys_lr_schedule[keys_lr_schedule < self.previously_trained_number_epoch]) != 0:
+                    last_epoch_config = keys_lr_schedule[keys_lr_schedule < self.previously_trained_number_epoch].max()
+                    self.lr = self.lr_schedule[str(last_epoch_config)]
+      
+            if self.batchsize_scheduler_bool:
+                keys_batchsize_schedule = np.array(list(self.batchsize_schedule.keys()), int)
+                if len(keys_batchsize_schedule[keys_batchsize_schedule < self.previously_trained_number_epoch]) != 0:
+                    last_epoch_config = keys_batchsize_schedule[keys_batchsize_schedule < self.previously_trained_number_epoch].max()
+                    self.lr = self.batchsize_schedule[str(last_epoch_config)]
+            
+            # If need be, you have to find the last configuration in the batchsize and learning rates schedules and use these ones.
             
             with open(config_path, 'r') as yaml_file:
                 loaded_parameters = yaml.load(yaml_file, yaml.SafeLoader)
@@ -684,15 +834,16 @@ class JuniprRunner(_BaseRunner):
             self.setup_loss()
             self.JUNIPR_model.train()
             self.setup_optimiser()
-            
-
-        if print_jets_bool:
+        
+        if assess_bool and not(binary_junipr_bool):
+            print("Assessing Unary Junipr")
             self.JUNIPR_model.eval()
-            assess_number_of_jets  = config.get(["Junipr_Model", "assess_number_of_jets"])
-            with torch.no_grad():
-                output_loss = 0
+            if print_jets_bool:
+                assess_number_of_jets  = config.get(["Junipr_Model", "assess_number_of_jets"])
                 store_printed_jets = os.path.join(self.result_path, 'jets_printed/')
                 os.makedirs(store_printed_jets, exist_ok=True)
+            with torch.no_grad():
+                output_loss = 0
                 for batch_count, batch_input in enumerate(self.test_dataloader):
                     #batch_input = batch_input.to(self.device)
                     
@@ -700,7 +851,7 @@ class JuniprRunner(_BaseRunner):
                     
                     batch_loss = self.compute_losses(batch_input, batch_output)
                     output_loss += batch_loss
-                    if batch_count < assess_number_of_jets:
+                    if (print_jets_bool and batch_count < assess_number_of_jets):
                         _, event_probability_list = self.compute_losses(batch_input, batch_output, test_bool = True)
                         save_jets_as = os.path.join(store_printed_jets, "jet_" + str(batch_count))
                         self.log_jet_constructed(batch_input, event_probability_list, path = save_jets_as, tensorboard_logger_bool = False)
@@ -710,4 +861,82 @@ class JuniprRunner(_BaseRunner):
                     """
                 mean_loss = output_loss / len(self.test_dataloader)
             print("The mean probability computed is {}".format(mean_loss))
+            
+        if assess_bool and binary_junipr_bool:
+            print("Assessing Binary Junipr")
+            self.JUNIPR_quark_model.eval()
+            self.JUNIPR_gluon_model.eval()
+            if print_jets_bool:
+                assess_number_of_jets  = config.get(["Junipr_Model", "assess_number_of_jets"])
+                store_printed_jets = os.path.join(self.result_path, 'jets_printed/')
+                os.makedirs(store_printed_jets, exist_ok=True)
+            with torch.no_grad():
+                output_loss = 0
+                output_accuracy = 0
+                prediction_list = list()
+                prediction_rounded_list = list()
+                used_label_list = list()
+                
+                prediction_rounded_list_good_label = list()
+                prediction_list_good_label =list()
+                true_label_list_good_label = list()
+                for batch_count, batch_input in enumerate(self.test_dataloader):
+                    #batch_input = batch_input.to(self.device)
+
+                    batch_output_quark = self.JUNIPR_quark_model(batch_input)
+                    batch_output_gluon = self.JUNIPR_gluon_model(batch_input)
+                    
+                    batch_loss, _, batch_accuracy = self.compute_binary_losses(batch_input, batch_output_quark, batch_output_gluon, test_loss = True)
+                    output_loss += batch_loss.item()
+                    
+                    prediction_label_proba, u_label, t_label = batch_accuracy
+                    
+                    prediction_label = round(prediction_label_proba)
+                    prediction_list.append(prediction_label_proba)
+                    prediction_rounded_list.append(prediction_label)
+                    used_label_list.append(u_label)
+  
+                    if prediction_label == u_label:
+                        output_accuracy += 1
+                    
+                    if not(t_label<0):
+                        # it's a good label
+                        prediction_list_good_label.append(prediction_label_proba)
+                        true_label_list_good_label.append(t_label)
+                        prediction_rounded_list_good_label.append(prediction_label)
+                    
+                    if (print_jets_bool and batch_count < assess_number_of_jets):
+                        _, event_probability_list, _ = self.compute_binary_losses(batch_input, batch_output_quark, batch_output_gluon, test_loss = True, detail_loss = True)
+                        save_jets_as = os.path.join(store_printed_jets, "jet_" + str(batch_count))
+                        self.log_jet_constructed(batch_input, event_probability_list, path = save_jets_as, tensorboard_logger_bool = False)
+                        """
+                        if (batch_count % 1000 == 0):
+                            print("Assessing the model. Step {} | loss {}".format(batch_count, batch_loss))
+                        """
+                mean_loss = output_loss / len(self.test_dataloader)
+                accuracy  = output_accuracy / len(self.test_dataloader)
+                list_plot = [("Used labels", used_label_list, prediction_list)]
+                list_plot_good = [("Good labels", true_label_list_good_label, prediction_list_good_label)]
+                
+                ROC_curve_plotter_from_values(list_plot, os.path.join(self.result_path, "roc_used_labels"))
+                ROC_curve_plotter_from_values(list_plot_good, os.path.join(self.result_path, "roc_good_labels"))
+                confusion_matrix_used = metrics.confusion_matrix(used_label_list, prediction_rounded_list)
+                plot_confusion_matrix(cm = confusion_matrix_used, normalize=True)
+                plt.savefig(os.path.join(self.result_path, 'confusion_matrix_normalised_used_labels.png'))
+                plt.close()
+                plot_confusion_matrix(cm = confusion_matrix_used, normalize=False)
+                plt.savefig(os.path.join(self.result_path, 'confusion_matrix_used_labels.png'))
+                plt.close()
+                confusion_matrix_good= metrics.confusion_matrix(true_label_list_good_label, prediction_rounded_list_good_label)
+                plot_confusion_matrix(cm = confusion_matrix_good, normalize=True)
+                plt.savefig(os.path.join(self.result_path, 'confusion_matrix_normalised_good_labels.png'))
+                plt.close()
+                plot_confusion_matrix(cm = confusion_matrix_good, normalize=False)
+                plt.savefig(os.path.join(self.result_path, 'confusion_matrix_good_labels.png'))
+                plt.close()
+            print("Analysing {} jets in total with {} with good labels".format(len(used_label_list), len(true_label_list_good_label)))
+            print("The mean probability computed is {}".format(mean_loss))
+            print("The accuracy computed is {}".format(accuracy))
+
+
             
