@@ -105,7 +105,11 @@
     <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/above_peak/isTruthQuark.png" width="350" />
     </p>
 
-    * Aaron agrees that this is due to the samples he downloaded coming from different slices in pT. He is working on getting a sample that is not biased. Once ready, I'll process it into JUNIPR jets.  
+    * Aaron agrees that this is due to the samples he downloaded coming from different slices in pT. He is working on getting a sample that is not biased. Once ready, I'll process it into JUNIPR jets.  Concerning the model currently running, it should not be too dramatically impacted by this secondayr peak as I remove the quark jets from the dijet sample (I remove the gluon jets from the ttbar sample). Here is the distribution of energy for the glon jets (left, all for dijet) and quark jets (right, all from ttbar) used in the matched distribution (the dataset used for running the new unary models):
+    <p float="center">
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6_train.json_energy_log.png" width="350" />
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6_train.json_energy_log.png" width="350" />
+    </p>
 
 * I have analysed the mis-reconstructed jets during the JUNIPR processing (feeding a set of particles that have been reclustered into a single jet using anti-kT algortihm with radius 0.4 to tha C/A algorithm with radius 0.5). These are specifically the ones coming from the full data (dijet + ttbar) with the E_sub cut of 1/2 GeV (so constituents with less than this are removed). What follows are an example of two eta-phi maps of constituents and how they are reclustered (based on the marker with the black marker indicated the reconstructed jet, the other colour indicates energy of constituent):
     <p float="center">
