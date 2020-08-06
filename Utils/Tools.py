@@ -60,6 +60,34 @@ def get_dictionary_cross_section():
     
     return cross_section_dictionary
 
+def write_to_file(filename, text, action = 'w', limit_decimal = False):
+    """
+    Writes in text file filename the couple text1, text2 in mode write (if action == 'w') or append 'a'.
+    """
+    if not(action == 'w' or action == 'a'):
+        raise ValueError("Unknown writing style {}". format(action))
+    with open(filename, action) as f:
+        if (type(text) == list and not(limit_decimal)):
+            if len(text) == 2:
+                f.write("{}, {}\n".format(text[0], text[1]))
+            elif len(text) == 3:
+                f.write("{}, {}, {}\n".format(text[0], text[1], text[2]))
+            elif len(text) == 4:
+                f.write("{}, {}, {}, {}\n".format(text[0], text[1], text[2], text[3]))
+            elif len(text) == 5:
+                f.write("{}, {}, {}, {}, {}\n".format(text[0], text[1], text[2], text[3], text[4]))
+        elif (type(text) == list and limit_decimal):
+            if len(text) == 2:
+                f.write("{}, {:.5f}\n".format(text[0], text[1]))
+            elif len(text) == 3:
+                f.write("{}, {:.5f}, {:.5f}\n".format(text[0], text[1], text[2]))
+            elif len(text) == 4:
+                f.write("{}, {:.5f}, {:.5f}, {:.5f}\n".format(text[0], text[1], text[2], text[3]))
+            elif len(text) == 5:
+                f.write("{}, {:.5f}, {:.5f}, {:.5f}, {:.5f}\n".format(text[0], text[1], text[2], text[3], text[4]))
+        else:
+            raise ValueError("Expecting a list in write")
+
 def write_ROC_info(filename, test, pred):
     """
     Writes in text file filename the test label, prediction proba to be used in ROC curves
@@ -73,6 +101,7 @@ def ROC_curve_plotter_from_files(list_of_files, save_path):
     Given a list of files.txt in list_of_files, loads them and plots the signal ROC curve.
     Entries of list_of_files should be tuples of the forme (file_name, signal_name)
     """
+    os.makedirs(save_path, exist_ok=True)
     plt.figure()
     plt.plot([0, 1], [0, 1], 'k--')
     for file_name, signal_name in list_of_files:
@@ -94,6 +123,7 @@ def ROC_curve_plotter_from_values(list_of_signal, save_path):
     Given a list of signals in list_of_signal, plots the ROC curve.
     Entries of list_of_files should be tuples of the forme (signal_name, truth_pred, proba_pred), the last two being numpy arrays
     """
+    os.makedirs(save_path, exist_ok=True)
     plt.figure()
     plt.plot([0, 1], [0, 1], 'k--')
     for signal_name, truth_pred, proba_pred in list_of_signal:
