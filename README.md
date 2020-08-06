@@ -95,7 +95,7 @@
     * As discussed last week, I analysed the issue by implementing some further cut. Isolating quark jets energy (left) and gluon jets energy (right) showed that quarks are overly represented in this secondary peak:
 
     <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/quark/jetEt.png" width="350" />
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/quark/jetE.png" width="350" />
     <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/gluon/jetE.png" width="350" />
     </p>
 
