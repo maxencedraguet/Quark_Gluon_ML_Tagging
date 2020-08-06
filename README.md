@@ -77,7 +77,7 @@
 <img src="Readme_Result/schedule_model2.png" width="600" />
 </p>
 
-* This has already been training for two days (expected to reach the end tomorrow). Here are the learning curves for the gluon (left) and quark (right) models so far:
+* This has already been training for two days (should reach the end this morning). Here are the learning curves for the gluon (left) and quark (right) models so far:
 
 <p float="center">
 <img src="Readme_Result/Temp_training/learning_curve_gluon.png" width="350" />
@@ -109,6 +109,10 @@
     <p float="center">
     <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6_train.json_energy_log.png" width="350" />
     <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6_train.json_energy_log.png" width="350" />
+    </p>
+    <p float="center">
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6_train.json_energy.png" width="350" />
+    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6_train.json_energy.png" width="350" />
     </p>
 
 * I have analysed the mis-reconstructed jets during the JUNIPR processing (feeding a set of particles that have been reclustered into a single jet using anti-kT algortihm with radius 0.4 to tha C/A algorithm with radius 0.5). These are specifically the ones coming from the full data (dijet + ttbar) with the E_sub cut of 1/2 GeV (so constituents with less than this are removed). What follows are an example of two eta-phi maps of constituents and how they are reclustered (based on the marker with the black marker indicated the reconstructed jet, the other colour indicates energy of constituent):
