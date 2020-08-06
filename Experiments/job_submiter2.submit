@@ -3,5 +3,8 @@ universe     = vanilla
 output       = /home/draguet/QGdis/Code/Experiments/local_condor/results.output.$(ClusterId)
 error        = /home/draguet/QGdis/Code/Experiments/local_condor/results.error.$(ClusterId)
 log          = /home/draguet/QGdis/Code/Experiments/local_condor/results.log.$(ClusterId)
-request_cpus = 4
+stream_output= True
+request_cpus = 5
+request_memory = 10 GB
+#requirements = Machine == "pplxwn64.physics.ox.ac.uk"
 queue 1
