@@ -34,7 +34,7 @@
         <img src="Readme_Result/Scaling/z_scaling.png" width="700" />
         </p>
     
-        * Branching <i>delta</i> scaling: the range is [0, , pi] (maximum angle between two particle is naturally pi). Alpha was chosen to have more weight at the very small values of 0 to 0.02 (most of the data had such values: logical since this is the angle between the mother and the hardest daughter, which has to be the one most aligned to the mother by energy-momentum conservation). This is the scaling function:
+        * Branching <i>delta</i> scaling: the range is [0, pi] (maximum angle between two particle is naturally pi). Alpha was chosen to have more weight at the very small values of 0 to 0.02 (most of the data had such values: logical since this is the angle between the mother and the hardest daughter, which has to be the one most aligned to the mother by energy-momentum conservation). This is the scaling function:
         <p float="center">
         <img src="Readme_Result/Scaling/delta_scaling.png" width="700" />
         </p>
@@ -46,7 +46,7 @@
     
         * Branching and momenta <i>phi</i> scaling: this one is an exception. The range is indeed restricted to [0, 2 X pi] and every value is (roughly) equiprobable. This is therefore linearly scaled to [0, 1] by diving the variable by 2 X pi.
     
-        * Momenta <i>energy</i> scaling: there is no natural upper limit since I did not restrain my data in energy. So theoretically it is [0, infinity[ but in practise observing the distribution of constituent energy, it is very unlikely to have something above 700 GeV (first plot below). I therefore used the set [0, 700] GeV. Alpha was chosen to have more weight at the low values of 0 to 200 (most of the data had such values). First is the <b>constituent</b> energy distribution (dijet left, ttbar right) and second is the scaling function:
+        * Momenta <i>energy</i> scaling: there is no natural upper limit since I did not restrain my data in energy. So theoretically it is [0, infinity[ but in practise, observing the distribution of constituent energy, it is very unlikely to have something above 700 GeV (first plot below). I therefore used the set [0, 700] GeV. Alpha was chosen to have more weight at the low values of 0 to 200 (most of the data had such values). First is the <b>constituent</b> energy distribution (dijet left, ttbar right) and second is the scaling function:
         <p float="center">
         <img src="Readme_Result/Scaling/constituentE_log_dijet.png" width="350" />
         <img src="Readme_Result/Scaling/constituentE_log_ttbar.png" width="350" />
