@@ -29,6 +29,7 @@ class RecurrentNetwork(_BaseNetwork):
         self.nonlinearity = self.identify_nonlinfunc(self.nonlinearity_name)
         _BaseNetwork.__init__(self, config=config)
         self.construct_layers()
+    
     def extract_parameters(self, config: Dict) -> None:
         """
         Method to extract relevant parameters from config and make them attributes of this class
@@ -37,12 +38,12 @@ class RecurrentNetwork(_BaseNetwork):
         self.RNN_type = config.get(["Junipr_Model", "Structure", "Recurrent", "RNN_type"])
         self.input_size = config.get(["Junipr_Model", "Structure", "Recurrent", "input_dimensions"])
         self.hidden_size = config.get(["Junipr_Model", "Structure", "Recurrent", "hidden_dimensions"])
-        self.initialisation = config.get(["Junipr_Model", "Structure", "Recurrent", "initialisation"]) #be sure it's Xavier Normal
         self.nonlinearity_name = config.get(["Junipr_Model", "Structure", "Recurrent", "nonlinearity"])
         self.end_nonlinearity_name = "identity"
+    
     def construct_layers(self) -> None:
         """
-        Constructs the top element. PROBLEM: I cannot choose initialisaiton of weights: this is a hotly debated topic (SKIPPED FOR NOW)
+        Constructs the top element. Note:initialisaiton of weights is forced to be Xavier uniform. This is a hotly debated topic but this should not be overly detrimental. 
         """
         #self.recurrent_network = self.initialise_weights(nn.Linear(self.input_size + self.hidden_size, self.hidden_size))
         if self.RNN_type == "rnn":
@@ -69,11 +70,10 @@ class RecurrentNetwork(_BaseNetwork):
             # hidden is the final hidden state.
             return output, hidden
         else:
-            output, (hidden, _)  = self.recurrent_network(input, (hidden, c_0)) #note: nonlinearity inside the recurrent-network definition (how sweet?)
+            output, (hidden, c_state) = self.recurrent_network(input, (hidden, c_0)) #note: nonlinearity inside the recurrent-network definition (how sweet?)
             # Output contains all hidden states. Shape: seq_len, batch, num_directions * hidden_size
             # hidden is the final hidden state.
-            return output, hidden
-
+            return output, (hidden, c_state)
 
     def save_model(self, path) -> None:
         torch.save(self.state_dict(), os.path.join(path, 'saved_RNN_weights.pt'))

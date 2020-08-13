@@ -46,6 +46,7 @@ class JuniprNetwork(_BaseNetwork):
         
         # Need to know granularity to manipulate the branch output.
         self.granularity = config.get(["Junipr_Model", "Junipr_Dataset", "granularity"])
+        self.padding_size = config.get(["Junipr_Model", "Junipr_Dataset", "padding_size"])
     
     
     def setup_Model(self, config: Dict):
@@ -69,6 +70,10 @@ class JuniprNetwork(_BaseNetwork):
         
         #   - P_mother
         self.p_mother_network = NeuralNetwork(source = "JuniprMother", config=config)
+        # To remove mothers not to be considered:
+        lower_triangular_ones = torch.tril(torch.tensor(np.ones((self.padding_size, self.padding_size)))).float()
+        tensor_dismiss_impossible_mothers = torch.where(lower_triangular_ones != 0, torch.tensor([0.0]), torch.tensor([float('-inf')]))
+        self.dismiss_impossible_mothers = tensor_dismiss_impossible_mothers[None, :, :].detach()
         
         #   - P_branch
         if self.branch_treatment == "unique":
@@ -91,48 +96,91 @@ class JuniprNetwork(_BaseNetwork):
         """
         seed_momenta        = input["seed_momentum"]
         daughters_momenta   = input["daughter_momenta"]
+        last_daughters_momenta = input["last_daughters_momenta"]
         mother_momenta      = input["mother_momenta"]
         n_branching         = input["n_branchings"]
         
+        #print("daughters_momenta \n", daughters_momenta.size())
+        #print("last_daughters_momenta \n", last_daughters_momenta.size())
+        #print("mother_momenta \n", mother_momenta.size())
+        
         #print("In junipr network, size of daughters_momenta: {} and full entries \n {}".format(daughters_momenta.size(), daughters_momenta))
         #print("In junipr network, size of daughters_momenta: {}".format(daughters_momenta.size()))
-        daughters_momenta_PACK = rnn.pack_padded_sequence(daughters_momenta, n_branching, batch_first=True, enforce_sorted = False)
+        # Use n_branching-1 since the last daughters have been set aside in last_daughters_momenta
+        daughters_momenta_PACK = rnn.pack_padded_sequence(daughters_momenta, n_branching-1, batch_first=True, enforce_sorted = False)
         # As a weird effect of interleaving the tensor entries (batch_sample1, batch_sample2, ... batch_sampleX, and again)
         
-        first_hidden_states = self.seed_momenta_to_hidden_network(seed_momenta)
+        first_hidden_states_unshaped = self.seed_momenta_to_hidden_network(seed_momenta)
         # Needs a dimension tweak
-        first_hidden_states = first_hidden_states[None, :, :]
+        first_hidden_states = first_hidden_states_unshaped[None, :, :]
         #print("In junipr network, size of first_hidden_states: {}".format(first_hidden_states.size()))
         if self.RNN_type == "lstm":
             first_c_states = self.seed_momenta_to_c0_network(seed_momenta)
             first_c_states = first_c_states[None, :, :]
-        
-        if self.RNN_type == "lstm":
-            hidden_states, last_hiddens = self.recurrent_network(daughters_momenta_PACK, first_hidden_states, first_c_states)
+            hidden_states_packed, (last_hiddens, last_c_states) = self.recurrent_network(daughters_momenta_PACK, first_hidden_states, first_c_states)
         else:
-            hidden_states, last_hiddens = self.recurrent_network(daughters_momenta_PACK, first_hidden_states)
+            hidden_states_packed, last_hiddens = self.recurrent_network(daughters_momenta_PACK, first_hidden_states)
         #print("\nIn junipr network, hidden output: {}\n".format(hidden_states))
         #print("In junipr network, last hidden output: {}".format(last_hiddens.size()))
-        hidden_states, _ = rnn.pad_packed_sequence(hidden_states, batch_first=True)
+        hidden_states_unpacked, _ = rnn.pad_packed_sequence(hidden_states_packed, batch_first=True)
         #print("In junipr network, hidden output UNPACKED size: {}".format(hidden_states.size()))
+        #print("first_hidden_states \n",first_hidden_states)
+        #first_hidden_states_reshaped = torch.reshape(first_hidden_states, (first_hidden_states.size()[1], 1, first_hidden_states.size()[2]))
+        first_hidden_states_reshaped = first_hidden_states.view(first_hidden_states.size()[1], 1, first_hidden_states.size()[2])
+        #print("hidden_states \n",hidden_states)
+        #print("In junipr network, size of hidden_states: {}".format(hidden_states.size()))
+        hidden_states = torch.cat([first_hidden_states_reshaped, hidden_states_unpacked], dim = 1)
+        trimmed_padding_size = hidden_states.size()[1]
+        #print("hidden_states after cat \n",hidden_states)
+        #print("In junipr network, size of hidden_states after cat: {}".format(hidden_states.size()))
+        
+        # Do a final step through the recurrence. This is to get the last hidden state for the very end probability computation
+        # Take back the last configuration in order to do this.
+        #print("last_daughters_momenta \n", last_daughters_momenta.size())
+        last_daughters_momenta = last_daughters_momenta[:, None, :]
+        #print("last_daughters_momenta tweaked \n", last_daughters_momenta.size())
+        if self.RNN_type == "lstm":
+            _, (last_hidden_states_unshaped, _) = self.recurrent_network(last_daughters_momenta, last_hiddens, last_c_states)
+        else:
+            _, last_hidden_states_unshaped = self.recurrent_network(last_daughters_momenta, last_hiddens)
+            #last_hidden_states = torch.reshape(last_hidden_states_unshaped, (last_hidden_states_unshaped.size()[1], 1, last_hidden_states_unshaped.size()[2]))
+        last_hidden_states = last_hidden_states_unshaped.view(last_hidden_states_unshaped.size()[1], 1, last_hidden_states_unshaped.size()[2])
+        #print("first_hidden_states : ", first_hidden_states.size())
+        #print("hidden_states : ", hidden_states.size())
+        #print("last_hiddens : ", last_hidden_states.size())
+
+        #print("first_hidden_states : \n", first_hidden_states)
+        #print("hidden_states : \n", hidden_states)
+        # print("last_hiddens : \n", last_hidden_states)
         
         output_end = self.p_end_network(hidden_states)
         #print("In junipr network, output end branch size: {}".format(output_end.size()))
         # This is missing a treatment of the very last node (where no branching ocurs)
-        output_very_end = self.p_end_network(last_hiddens)
+        output_very_end = self.p_end_network(last_hidden_states)
+
         #print("In junipr network, output very end branch size: {}".format(output_very_end.size()))
         #print("In junipr network, output very end branch: {}".format(output_very_end))
         # should find a way of concatenating output_end and output_very_end along the seq dimension
         
-        output_mother = self.p_mother_network(hidden_states)
+        output_mother_unbalance = self.p_mother_network(hidden_states)[:, :trimmed_padding_size, :trimmed_padding_size]
+        
+        #lower_triangular_ones = torch.tril(torch.tensor(np.ones((trimmed_padding_size, trimmed_padding_size)))).float()
+        #tensor_dismiss_impossible_mothers = torch.where(lower_triangular_ones != 0, torch.tensor([0.0]), torch.tensor([float('-inf')]))
+        #tensor_dismiss_impossible_mothers = tensor_dismiss_impossible_mothers[None, :, :].detach()
+        
+        remove_nasty_values = self.dismiss_impossible_mothers[:, :trimmed_padding_size, :trimmed_padding_size].repeat(output_mother_unbalance.size()[0], 1, 1).detach()
+        #remove_nasty_values = tensor_dismiss_impossible_mothers.repeat(output_mother_unbalance.size()[0], 1, 1).detach()
+        #print("output_mother_unbalance \n",output_mother_unbalance)
+        output_mother = output_mother_unbalance + remove_nasty_values
+        #print("output_mother \n",output_mother)
+    
         #print("In junipr network, output mother branch size: {}".format(output_mother.size()))
         # A small amount of processing is required for mother: there should only be as many considered entries as particles in the state.
         # This can be easily done to the batch: just apply keep the lower triangular part (with diagonal) in a matrix such that batch, recurrence, feature.
-        output_mother = torch.tril(output_mother, diagonal = 0)
+        #output_mother = torch.tril(output_mother, diagonal = 0)
         # To limit the softmax in the loss to the non-zero value (all zero-values are due to trim, absolutely unlikely for a value out of the trim to be null)
-        output_mother = torch.where(output_mother != 0, output_mother, torch.tensor([float('-inf')]))
+        # output_mother = torch.where(output_mother != 0, output_mother, torch.tensor([float('-inf')]))
 
-        trimmed_padding_size = hidden_states.size()[1]
         # Branch
         #print("In junipr network, mother_momenta size: {}".format(mother_momenta.size()))
         mother_momenta = mother_momenta[:, :trimmed_padding_size, :]
@@ -168,14 +216,25 @@ class JuniprNetwork(_BaseNetwork):
             #print("Size ", combined_branch_with_zt.size())
             combined_branch_with_ztd =  torch.cat((combined_branch_with_zt, branch_input_d), dim = 2)
             
+            #print("In junipr network, combined_branch          size: {}".format(combined_branch         .size()))
+            #print("In junipr network, combined_branch_with_z   size: {}".format(combined_branch_with_z  .size()))
+            #print("In junipr network, combined_branch_with_ztd size: {}".format(combined_branch_with_ztd.size()))
+            #print("In junipr network, combined_branch_with_zt  size: {}".format(combined_branch_with_zt .size()))
+            
+            
             output_branch_z = self.p_branch_z_network(combined_branch)
             output_branch_t = self.p_branch_t_network(combined_branch_with_z)
             output_branch_p = self.p_branch_p_network(combined_branch_with_ztd)
             output_branch_d = self.p_branch_d_network(combined_branch_with_zt)
+            #print("In junipr network, output_branch_z size: {}".format(output_branch_z.size()))
+            #print("In junipr network, output_branch_t size: {}".format(output_branch_t.size()))
+            #print("In junipr network, output_branch_p size: {}".format(output_branch_p.size()))
+            #print("In junipr network, output_branch_d size: {}".format(output_branch_d.size()))
+
         
         # Join the outputs and return
         output_dictionnary = dict()
-        output_dictionnary["hidden_state"]    = hidden_states
+        #output_dictionnary["hidden_state"]    = hidden_states      # seems useless to return this
         output_dictionnary["output_end"]      = output_end
         output_dictionnary["output_very_end"] = output_very_end
         output_dictionnary["output_mother"]   = output_mother

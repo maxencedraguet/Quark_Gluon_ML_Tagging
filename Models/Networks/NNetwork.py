@@ -97,7 +97,7 @@ class NeuralNetwork(_BaseNetwork):
                         warning.warn("Output dimension of {} network = {} and does not agree with granularity dimension given {}.\nEnforcing padding dimensions upon network.".format(branch_name, self.dimensions[-1], control_granularity))
                         self.dimensions[-1] = control_granularity
                 
-                if branch_name == "JuniprBranchz":
+                if branch_name == "JuniprBranchZ":
                     if ((control_hidden_dimensions + 4) != self.dimensions[0]):
                         warning.warn("Output dimension of {} network = {} and does not agree with granularity dimension given {}.\nEnforcing padding dimensions upon network.".format(branch_name, self.dimensions[0], (control_hidden_dimensions + 4)))
                         self.dimensions[0] = (control_hidden_dimensions + 4)
