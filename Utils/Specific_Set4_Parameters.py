@@ -122,7 +122,7 @@ plot_xlabels          = {
                          'jetE'                  : '$E_{\mathrm{jet}}$ [GeV]',
                          'jetEMFrac'             : 'EM Fraction', 
                          'jetHECFrac'            : 'HEC Fraction',
-                         'jetChFrac'             : '$\frac{ \sum_{i \in \mathrm{tracks}} p_{\mathrm{T ,track}}^{i} }{ p_{\mathrm{T, jet}} }$',
+                         'jetChFrac'             : r'$\frac{ \sum_{i \in \mathrm{tracks}} p_{\mathrm{T ,track}}^{i} }{ p_{\mathrm{T, jet}} }$',
                          'jetNumTrkPt500'        : '$n_{\mathrm{track}}^{500}$', 
                          'jetNumTrkPt1000'       : '$n_{\mathrm{track}}^{1000}$',
                          'jetTrackWidthPt500'    : '$w_{\mathrm{track}}^{500}$', 

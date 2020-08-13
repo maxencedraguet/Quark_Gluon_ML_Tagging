@@ -76,15 +76,19 @@ def write_to_file(filename, text, action = 'w', limit_decimal = False):
                 f.write("{}, {}, {}, {}\n".format(text[0], text[1], text[2], text[3]))
             elif len(text) == 5:
                 f.write("{}, {}, {}, {}, {}\n".format(text[0], text[1], text[2], text[3], text[4]))
+            elif len(text) == 6:
+                f.write("{}, {}, {}, {}, {}, {}\n".format(text[0], text[1], text[2], text[3], text[4], text[5]))
         elif (type(text) == list and limit_decimal):
             if len(text) == 2:
-                f.write("{}, {:.5f}\n".format(text[0], text[1]))
+                f.write("{}, {:.6f}\n".format(text[0], text[1]))
             elif len(text) == 3:
-                f.write("{}, {:.5f}, {:.5f}\n".format(text[0], text[1], text[2]))
+                f.write("{}, {:.6f}, {:.6f}\n".format(text[0], text[1], text[2]))
             elif len(text) == 4:
-                f.write("{}, {:.5f}, {:.5f}, {:.5f}\n".format(text[0], text[1], text[2], text[3]))
+                f.write("{}, {:.6f}, {:.6f}, {:.6f}\n".format(text[0], text[1], text[2], text[3]))
             elif len(text) == 5:
-                f.write("{}, {:.5f}, {:.5f}, {:.5f}, {:.5f}\n".format(text[0], text[1], text[2], text[3], text[4]))
+                f.write("{}, {:.6f}, {:.6f}, {:.6f}, {:.6f}\n".format(text[0], text[1], text[2], text[3], text[4]))
+            elif len(text) == 6:
+                f.write("{}, {:.6f}, {:.6f}, {:.6f}, {:.6f}, {:.6f}\n".format(text[0], text[1], text[2], text[3], text[4], text[5]))
         else:
             raise ValueError("Expecting a list in write")
 
