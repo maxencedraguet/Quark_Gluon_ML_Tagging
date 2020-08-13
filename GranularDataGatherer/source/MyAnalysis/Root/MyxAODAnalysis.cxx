@@ -385,6 +385,21 @@ StatusCode MyxAODAnalysis :: execute ()
     const xAOD::JetConstituentVector cons = jet->getConstituents();
     for (auto cluster_itr : cons){
         //ANA_MSG_INFO ("execute(): processing event: " << m_runNumber << " eventnumber: " << m_eventNumber << " for jet number " << counter_jet <<" in particle number: "<<counter_part);
+        
+        //Compute delta R between consitutent and Jet
+        Double_t deta = cluster_itr->eta() - jet->eta ();
+        Double_t dphi = TVector2::Phi_mpi_pi(cluster_itr->phi() - jet->phi());
+        Double_t dR   = TMath::Sqrt( deta*deta+dphi*dphi );
+        Double_t en   = cluster_itr->e();
+        
+        // These two are added for the sake of junipr: need lower border
+        //if(dR < 0.05){ continue;}
+        if(en < 1){ continue;}
+        
+        //hist ("h_deltaR")->Fill (dR);
+        partDeltaR->push_back(dR);
+        
+        
         partE->push_back(cluster_itr->e());
     	partPt->push_back(cluster_itr->pt());
         partPx->push_back(cluster_itr->px());
@@ -396,13 +411,6 @@ StatusCode MyxAODAnalysis :: execute ()
         partJetCount->push_back(counter_jet);
         partRunNumber->push_back(m_runNumber);
         partEventNumber->push_back(m_eventNumber);
-
-        //Compute delta R between consitutent and Jet
-        Double_t deta = cluster_itr->eta() - jet->eta ();
-        Double_t dphi = TVector2::Phi_mpi_pi(cluster_itr->phi() - jet->phi());
-        double_t dR   = TMath::Sqrt( deta*deta+dphi*dphi );
-        //hist ("h_deltaR")->Fill (dR);
-        partDeltaR->push_back(dR);
   	/*
         ANA_MSG_INFO ("execute(): constitutent Run " <<m_runNumber<< " and eventnumber "<<m_eventNumber);
     	ANA_MSG_INFO ("execute(): constitutent jet pt = " << (cluster_itr->pt() * 0.001) << " GeV");

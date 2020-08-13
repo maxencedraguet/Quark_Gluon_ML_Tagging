@@ -24,7 +24,7 @@ parser.add_option( '-n', '--nEvents', dest = 'nevents',
                   action = 'store', type = int, default = -1,
                   help = 'Number of events you wish to run on, default is all (-1).' )
 parser.add_option( '-j', '--DAOD_JETM', dest = 'DAOD_key',
-                  type = "choice", choices=['DAOD_JETM6', 'DAOD_JETM8', 'DAOD_JETM6_1', 'DAOD_JETM6_2', 'DAOD_JETM8_1', 'DAOD_JETM8_2'], default = 'DAOD_JETM6',
+                  type = "choice", choices=['DAOD_JETM6', 'DAOD_JETM8', 'DAOD_JETM6_1', 'DAOD_JETM6_2', 'DAOD_JETM8_1', 'DAOD_JETM8_2', 'DAOD_JETM6_ttbar_extra', 'DAOD_JETM6_ttbar_part2_BATCH1', 'DAOD_JETM6_ttbar_part2_BATCH2', 'DAOD_JETM6_ttbar_part2_BATCH3', 'DAOD_JETM6_dijet_part2', 'DAOD_JETM6_dijet_part2_list'], default = 'DAOD_JETM6',
                   help = 'The DAOD_JETM - X type desired. Process all files stored in /data/atlas/atlasdata3/oneill/DAOD_JETMX that have been flagged to the dictionnary below.' )
 ( options, args ) = parser.parse_args()
 
@@ -34,8 +34,27 @@ data_type_dict = {'data'      : 0,
                   'FullSim'   : 1,
                   'AtlfastII' : 2}
 
+
 dataType = data_type_dict[options.data_type]
-file_dico = {"DAOD_JETM6":["/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.364704.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+file_dico = {"DAOD_JETM6_dijet_part2_list": ["/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364700.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ0WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364701.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ1WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364702.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ2WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364703.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ3WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364704.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364705.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ5WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364706.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ6WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364707.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ7WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364709.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ9WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364710.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ10WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364711.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ11WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
+                                 "/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364712.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ12WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128"],
+
+             "DAOD_JETM6_ttbar_extra": ["/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128"],
+             "DAOD_JETM6_ttbar_part2_BATCH1": ["/data/atlas/atlasdata3/mdraguet/DAOD_JETM6_PARTII_ttbar/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH1.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128"],
+             "DAOD_JETM6_ttbar_part2_BATCH2": ["/data/atlas/atlasdata3/mdraguet/DAOD_JETM6_PARTII_ttbar/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH2.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128"],
+             "DAOD_JETM6_ttbar_part2_BATCH3": ["/data/atlas/atlasdata3/mdraguet/DAOD_JETM6_PARTII_ttbar/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH3.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128"],
+            "DAOD_JETM6_dijet_part2": ["/data/atlas/atlasdata3/mdraguet/DAOD_JETM6/mc16_13TeV.364700.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ_0_to_12WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128"],
+            "DAOD_JETM6":["/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.364704.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128",
                            "/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128"],
              "DAOD_JETM6_ttbar":["/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128"],
              "DAOD_JETM6_dijet":["/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.364704.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128"],
@@ -51,6 +70,8 @@ file_dico = {"DAOD_JETM6":["/data/atlas/atlasdata3/oneill/DAOD_JETM6/mc16_13TeV.
              "DAOD_JETM8_1":["/data/atlas/atlasdata3/oneill/DAOD_JETM8/mc16_13TeV.361024.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4W.deriv.DAOD_JETM8.e3668_s3126_r10201_p3782"],
              "DAOD_JETM8_2":["/data/atlas/atlasdata3/oneill/DAOD_JETM8/mc16_13TeV.426138.Sherpa_CT10_jets_JZ8.deriv.DAOD_JETM8.e4635_s3126_r9364_r9315_p3954"],
             }
+
+
 
 file_list = file_dico[options.DAOD_key]
 
