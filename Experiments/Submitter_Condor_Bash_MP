@@ -1,0 +1,8 @@
+#!/bin/bash
+source /home/draguet/QGdis/QGdis-env/bin/activate
+ 
+# Run the Python script
+python3 /home/draguet/QGdis/Code/Experiments/Submitter_Condor_MultiProcessor.py
+ 
+# Deactivate environment
+deactivate
