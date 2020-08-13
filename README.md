@@ -1,7 +1,8 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* You will find a very rough draft of draft of dissertation structure on the repo. 
+* You will find a very rough draft of draft of dissertation structure in Proposed_Structure_Dissertation.pdf. 
+
 * I have corrected a final MAJOR bug in my implementation: I realise I was feeding the wrong information at each node of the recurrence. For node <i>t</i>, the input is the daughter <b>entering</b> the node, which are labelled as being from step t. So the start of the recurrence step <i>t</i> are the daughter labelled as being from <i>t</i>. The problem is that in the JUNIPR paper they label things as starting from <i>t</i> = 1. But there are no daughter initially (the very first node replace the hidden state produce from recurrence on the daughter by an MLP tranfosrmation of the seed momentum). So There is a mismatch in the list of daugthers and mothers: the first mother (index 0) is the mother of step 1 and the very first daugthers (index 0) are the daughters of step 2 (NOT 1). I was not moving these elements in such a way and this led to an observable mismatch in probability distributions (see down). Other issue: the ending branch had a wrong connexion for the very last node. 
 
 * I have spent a lot of time making the network more efficient. This demanded a lot of exploration. 
@@ -28,7 +29,7 @@
          * Probability for a mother to be the next one to decay in an energy-ordered list of particles existing at the given timestep: 
          <p float="center">
          <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/mother_id_distribution.png" width="350" />
-         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2mother_id_distribution.png" width="350" />
+         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2/mother_id_distribution.png" width="350" />
          </p>
          
          * Probability distribution of the z-branch: 
