@@ -17,10 +17,12 @@ import pandas as pd
 #pd.set_option('display.max_rows', None)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
+from multiprocessing import Manager
 
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+
 
 EPSILON = 1e-10
 INF     = 1e8
@@ -54,7 +56,9 @@ class JuniprDataset(Dataset):
         super().__init__()
         #self.json_file = config.get(["JuniprDataset", "data_path"])
         self.json_file = json_file
+        #manager = Manager()
         with open(self.json_file) as json_file:
+            #self.data_array = manager.list(json.load(json_file)['JuniprJets']) #a list of dictionnaries
             self.data_array = json.load(json_file)['JuniprJets'] #a list of dictionnaries
         self.data_size = len(self.data_array)
         #self.transform = config.get(["JuniprDataset", "transform"])
@@ -126,7 +130,9 @@ class JuniprDataset(Dataset):
 class PadTensors(object):
     """
     Pads the tensors of the sample to have the default_size
-    The tensors CSJets, branching, mother_momenta, and daughter_momenta will be padded to have size pad_to_size from
+    The tensors CSJets, branching, mother_momenta, and daughter_momenta will be padded to have size pad_to_size given by default_size
+    
+    The last pair of daughter momenta is set aside to last_daughters_momenta (special treatment in the recurrence: their hidden state does not contribute to daughet nor mother_branch).
     
     Note that n_branching will keep the real size of these tensors
     """
@@ -146,7 +152,9 @@ class PadTensors(object):
         
         padded_branching[:branching.size()[0], :] = branching
         padded_mother_momenta[:mother_momenta.size()[0], :] = mother_momenta
-        padded_daughter_momenta[:daughter_momenta.size()[0], :] = daughter_momenta
+        
+        padded_daughter_momenta[:(daughter_momenta.size()[0] - 1), :] = daughter_momenta[:(daughter_momenta.size()[0] - 1), :]
+        last_daughters_momenta = daughter_momenta[daughter_momenta.size()[0] - 1, :]
         
         # Case of mother_id_energy: particular
         #   - has to be padded to self.output_size * self.output_size (first for recurrence, second for possible mothers)
@@ -187,7 +195,8 @@ class PadTensors(object):
                      "mother_id_energy": torch.IntTensor(padded_mother_id),
                      "branching": torch.FloatTensor(padded_branching),
                      "mother_momenta": torch.FloatTensor(padded_mother_momenta),
-                     "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
+                     "daughter_momenta": torch.FloatTensor(padded_daughter_momenta),
+                     "last_daughters_momenta": torch.FloatTensor(last_daughters_momenta)
                    }
         
         else:
@@ -201,8 +210,144 @@ class PadTensors(object):
                      "branching": torch.FloatTensor(padded_branching),
                      "unscaled_branching": torch.FloatTensor(padded_unscaled_branching),
                      "mother_momenta": torch.FloatTensor(padded_mother_momenta),
-                     "daughter_momenta": torch.FloatTensor(padded_daughter_momenta)
+                     "daughter_momenta": torch.FloatTensor(padded_daughter_momenta),
+                     "last_daughters_momenta": torch.FloatTensor(last_daughters_momenta)
                     }
+
+class PadTensorsWithMask(object):
+    """
+        Pads the tensors of the sample to have the default_size.
+        Also output for each sample a padded tensor with the masks.
+        
+        The tensors CSJets, branching, mother_momenta, and daughter_momenta will be padded to have size pad_to_size from
+        
+        Note that n_branching will keep the real size of these tensors and the masking will directly apply to it.
+        
+        You need a mask for the mother_id and branch/ending (only one for the last two)
+        """
+    def __init__(self, default_size, pad_token, train_bool):
+        assert isinstance(default_size, int)
+        self.default_size = default_size
+        self.pad_token = pad_token
+        self.train_bool = train_bool
+    
+    def __call__(self, sample):
+        branching, mother_id_energy = sample["branching"], sample["mother_id_energy"]
+        mother_momenta, daughter_momenta = sample["mother_momenta"], sample["daughter_momenta"]
+        n_branching = branching.size()[0]
+        """
+        print("#######################################################")
+        print("\nSample start scaling, n_branching:{} \n".format(n_branching))
+        print("#######################################################")
+        """
+        """
+        mother_mask = torch.FloatTensor(np.zeros((self.default_size, mother_momenta.size()[-1])))
+        mother_mask[:mother_momenta.size()[0]] = torch.FloatTensor(np.ones((mother_momenta.size()[0], mother_momenta.size()[-1])))
+        mother_mask = mother_mask.type(torch.bool)
+        """
+        """
+        # Might be needed
+        mother_mask = torch.FloatTensor(np.ones((self.default_size, self.default_size)))
+        mother_mask = torch.tril(mother_mask, diagonal = 0)
+        mother_mask[n_branching:, :] = torch.FloatTensor(np.zeros((self.default_size - n_branching, self.default_size)))
+        mother_mask = mother_mask.type(torch.bool)
+        """
+        """
+        print("mother_id_energy (for size: {}): \n {}".format(mother_id_energy.size(), mother_id_energy))
+        print("mother_mask (for size: {}): \n{}".format(mother_mask.size(), mother_mask))
+        print("Some further printing\ {}".format(mother_mask[:n_branching+2, :n_branching+2]))
+        """
+        
+        branching_mask = torch.FloatTensor(np.zeros((self.default_size, 1)))
+        branching_mask[:n_branching] = torch.FloatTensor(np.ones((n_branching, 1)))
+        branching_mask = branching_mask.type(torch.bool)
+
+        """
+        print("branching for size: {}): \n {}".format(branching.size(), branching))
+        print("branching_mask (for size: {}): \n{}".format(branching_mask.size(), branching_mask))
+        """
+        """
+        ending_mask = torch.FloatTensor(np.zeros((self.default_size, 1)))
+        ending_mask[:n_branching] = torch.FloatTensor(np.ones((n_branching, 1)))
+        ending_mask = ending_mask.type(torch.bool)
+        """
+        """
+        print("Ending, for a tensor of {} branchings \n".format(n_branching))
+        print("ending_mask (for size: {}): \n{}".format(ending_mask.size(), ending_mask))
+        """
+        padded_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
+        padded_mother_momenta = np.ones((self.default_size, mother_momenta.size()[-1])) * self.pad_token
+        padded_daughter_momenta = np.ones((self.default_size, daughter_momenta.size()[-1])) * self.pad_token
+        
+        padded_branching[:branching.size()[0], :] = branching
+        padded_mother_momenta[:mother_momenta.size()[0], :] = mother_momenta
+        #padded_daughter_momenta[:daughter_momenta.size()[0], :] = daughter_momenta
+        padded_daughter_momenta[:(daughter_momenta.size()[0] - 1), :] = daughter_momenta[:(daughter_momenta.size()[0] - 1), :]
+        last_daughters_momenta = daughter_momenta[daughter_momenta.size()[0] - 1, :]
+        
+        # Case of mother_id_energy: particular
+        #   - has to be padded to self.output_size * self.output_size (first for recurrence, second for possible mothers)
+        #   - the second dimension is actually a one-hot encoding of the index of the mother (in energy order, 0 being most energetic)
+        padded_mother_id = np.ones((self.default_size)) * self.pad_token
+        padded_mother_id[:mother_id_energy.size()[0]] = mother_id_energy
+        #print("mother_momenta size {} and daughter_momenta size {}".format(mother_momenta.size()[0], daughter_momenta.size()[0] - 1 ))
+        if not(self.train_bool):
+            CSJets = sample["CSJets"]
+            CS_ID_mothers = sample["CS_ID_mothers"]
+            CS_ID_daugthers = sample["CS_ID_daugthers"]
+            unscaled_branching = sample["unscaled_branching"]
+            padded_CS_jet = np.ones((self.default_size*2, CSJets.size()[-1])) * self.pad_token
+            padded_CS_ID_mothers = np.ones((self.default_size)) * self.pad_token
+            padded_CS_ID_daugthers = np.ones((self.default_size, CS_ID_daugthers.size()[-1])) * self.pad_token
+            padded_unscaled_branching = np.ones((self.default_size, branching.size()[-1])) * self.pad_token
+            
+            padded_CS_jet[:CSJets.size()[0], :] = CSJets
+            padded_CS_ID_mothers[:CS_ID_mothers.size()[0]] = CS_ID_mothers
+            padded_CS_ID_daugthers[:CS_ID_daugthers.size()[0], :] = CS_ID_daugthers
+            padded_unscaled_branching[:branching.size()[0], :] = unscaled_branching
+        
+        """
+            # This old loop encoded 1-hot way the mother_id_energy and did the ending_val.
+            #This is not necessary: each id can be returned as a class and
+            # compared to C output of mother branch (total number of possible mother id viewed as class).
+            padded_mother_id = np.ones((self.default_size, self.default_size)) * self.pad_token
+            for counter, elem in enumerate(mother_id_energy):
+            padded_mother_id[counter, elem] = 1.0
+            ending_val[counter] = 0.0
+            ending_val[len(mother_id_energy)] = 1.0
+            
+            """
+        if self.train_bool:
+            return { "label": sample["label"],
+                "n_branchings": sample["n_branchings"],
+                "seed_momentum": sample["seed_momentum"],
+                "mother_id_energy": torch.IntTensor(padded_mother_id),
+                "branching": torch.FloatTensor(padded_branching),
+                "mother_momenta": torch.FloatTensor(padded_mother_momenta),
+                "daughter_momenta": torch.FloatTensor(padded_daughter_momenta),
+                "last_daughters_momenta": torch.FloatTensor(last_daughters_momenta),
+                #"mother_mask": mother_mask,
+                #"ending_mask": ending_mask,
+                "branching_mask": branching_mask
+                }
+        
+        else:
+            return { "label": sample["label"],
+                "n_branchings": sample["n_branchings"],
+                "seed_momentum": sample["seed_momentum"],
+                "mother_id_energy": torch.IntTensor(padded_mother_id),
+                "CSJets": torch.FloatTensor(padded_CS_jet),
+                "CS_ID_mothers": torch.IntTensor(padded_CS_ID_mothers),
+                "CS_ID_daugthers":  torch.IntTensor(padded_CS_ID_daugthers),
+                "branching": torch.FloatTensor(padded_branching),
+                "unscaled_branching": torch.FloatTensor(padded_unscaled_branching),
+                "mother_momenta": torch.FloatTensor(padded_mother_momenta),
+                "daughter_momenta": torch.FloatTensor(padded_daughter_momenta),
+                "last_daughters_momenta": torch.FloatTensor(last_daughters_momenta),
+                #"mother_mask": mother_mask,
+                #"ending_mask": ending_mask,
+                "branching_mask": branching_mask
+                }
 
 class FeatureScalingJunipr(object):
     """
@@ -807,7 +952,9 @@ class AddExtraLabel(object):
                     "mother_id_energy": sample["mother_id_energy"],
                     "branching": sample["branching"],
                     "mother_momenta": sample["mother_momenta"],
-                    "daughter_momenta": sample["daughter_momenta"]
+                    "daughter_momenta": sample["daughter_momenta"],
+                    "last_daughters_momenta": sample["last_daughters_momenta"],
+                    "branching_mask": sample["branching_mask"]
                 }
         
         else:
@@ -822,6 +969,55 @@ class AddExtraLabel(object):
                     "branching": sample["branching"],
                     "unscaled_branching": sample["unscaled_branching"],
                     "mother_momenta": sample["mother_momenta"],
-                    "daughter_momenta": sample["daughter_momenta"]
+                    "daughter_momenta": sample["daughter_momenta"],
+                    "last_daughters_momenta": sample["last_daughters_momenta"],
+                    "branching_mask": sample["branching_mask"]
                     }
+
+class CorrectTrueLabel(object):
+    """
+    This special transform modifies the label of the sample if it is -1 (an incorrectly labelled sample). It replaces such sample by the fed value.
+    Used to correct teh quark-rich -1 labels to 1 and gluon-rich -1 labels to 0.
+    
+    Note that when testing, the original label is conserved in original_label
+    """
+    def __init__(self, value_replace, train_bool):
+        assert isinstance(value_replace, int)
+        self.value_replace = value_replace
+        self.train_bool = train_bool
+    
+    def __call__(self, sample):
+        true_label = sample["label"]
+        if self.train_bool:
+            if not(true_label == 0 or true_label == 1):
+                true_label = self.value_replace
+            return {"label": true_label,
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": sample["seed_momentum"],
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "branching": sample["branching"],
+                    "mother_momenta": sample["mother_momenta"],
+                    "daughter_momenta": sample["daughter_momenta"],
+                    "last_daughters_momenta": sample["last_daughters_momenta"],
+                    "branching_mask": sample["branching_mask"]
+                   }
+        else:
+            original_label = true_label
+            if not(true_label == 0 or true_label == 1):
+                true_label = self.value_replace
+            return {"label": true_label,
+                    "original_label": original_label,
+                    "n_branchings": sample["n_branchings"],
+                    "seed_momentum": sample["seed_momentum"],
+                    "mother_id_energy": sample["mother_id_energy"],
+                    "CSJets": sample["CSJets"],
+                    "CS_ID_mothers": sample["CS_ID_mothers"],
+                    "CS_ID_daugthers": sample["CS_ID_daugthers"],
+                    "branching": sample["branching"],
+                    "unscaled_branching": sample["unscaled_branching"],
+                    "mother_momenta": sample["mother_momenta"],
+                    "daughter_momenta": sample["daughter_momenta"],
+                    "last_daughters_momenta": sample["last_daughters_momenta"],
+                    "branching_mask": sample["branching_mask"]
+                   }
 

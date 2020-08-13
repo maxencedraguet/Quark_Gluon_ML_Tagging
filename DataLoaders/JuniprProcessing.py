@@ -15,8 +15,6 @@ import math
 import numpy as np
 import pandas as pd
 from pyjet import cluster
-from pyjet.utils import ptepm2ep
-from tqdm.auto import tqdm
 import json
 
 def get_4mom(jet):
@@ -291,7 +289,7 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
             next_particles_step = list()
             observed_candidate_mothers = []
             for elem in particles_step:
-                mother_part = elem.child #remember the note from function definition: PyJet child is in fact the mother.
+                mother_part = elem.child # remember the note from function definition: PyJet child is in fact the mother.
                 if mother_part is None:
                     # this is a cataclysmic event: makes no sense to consider a particle with no mother here. The only one that it could be is the top mother but it shouldn't be in the loop.
                     # This is very rare so get rid of it
@@ -505,11 +503,11 @@ def perform_clustering(cluster_algorithm, cluster_radius, jet_pdf, constituent_p
         # Now make a dictionnary with these entry and add it to the junipr_ready_datapoint list
         datapoint = dict()
         datapoint["label"]  = int(label)
-        datapoint["multiplicity"]  = multiplicity
+        datapoint["multiplicity"]  = multiplicity # useless
         datapoint["n_branchings"]  = n_branchings
         datapoint["seed_momentum"] = seed_momentum
         datapoint["CSJets"]        = CSJets
-        datapoint["CS_ID_intermediate_states_ind"] = CS_ID_intermediate_states_ind
+        datapoint["CS_ID_intermediate_states_ind"] = CS_ID_intermediate_states_ind  # useless
         datapoint["mother_id_energy_order"] = mother_id_energy_order
         datapoint["CS_ID_mothers"]   = CS_ID_mothers
         datapoint["CS_ID_daugthers"] = CS_ID_daugthers
