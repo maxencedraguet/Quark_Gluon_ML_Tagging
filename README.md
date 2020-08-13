@@ -1,130 +1,74 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* I have corrected a lot of bugs in my implementation. By order of importance:
-    * I realise I was feeding a lot of garbage to the network because I was using the scaling functions proposed by JUNIPR. This had the effect of erasing a lot of information as many of the variables I was trying to scale between 0 and 1 were out of the range. It was very detrimental for the daughter branch as the value there gets discretised and if it falls out of the range, it crumbles to either 0 or 1. I did not realise that this was in fact extremely common and happened a lot of time for a given event (the fact I tried to modify the scaling parameters to accommodate more of my data was not sufficient). I therefore got rid of the JUNIPR scaling and developped my own, as explained below. 
+* You will find a very rough draft of draft of dissertation structure on the repo. 
+* I have corrected a final MAJOR bug in my implementation: I realise I was feeding the wrong information at each node of the recurrence. For node <i>t</i>, the input is the daughter <b>entering</b> the node, which are labelled as being from step t. So the start of the recurrence step <i>t</i> are the daughter labelled as being from <i>t</i>. The problem is that in the JUNIPR paper they label things as starting from <i>t</i> = 1. But there are no daughter initially (the very first node replace the hidden state produce from recurrence on the daughter by an MLP tranfosrmation of the seed momentum). So There is a mismatch in the list of daugthers and mothers: the first mother (index 0) is the mother of step 1 and the very first daugthers (index 0) are the daughters of step 2 (NOT 1). I was not moving these elements in such a way and this led to an observable mismatch in probability distributions (see down). Other issue: the ending branch had a wrong connexion for the very last node. 
 
-    * I have fixed the mother branch: the cross-entropy has to be taken with respect to the x possible mother available at the time step studied. So if at the given timestep, there are 10 possible mothers (10 particles existing at the step in the tree, even final states particles), you have to output a score for these 10 entries to predict which will decay (in an energy order list: 1st entry: you predict it's the most energetic | 2nd entry: you predict it's the second most energetic |  ....   | 10th entry: you predict it is the least energetic). Before: it was considering the wrong number of particles (it was using the padded value, since for the RNN you pad the number of mothers). Now, it should see the right info (by making the associated tensor lower triangular and setting the upper triangular part to -inf so that it does not contribute in the softmax step). I have checked that this behaves as expected now. 
-    
-    * I had missed something with the binary objective JUNIPR implemented (for my defence, they never mentioned it in the paper). They took the binary cross-entropy of sigmoid[log(P(Jet | Quark)) -log(P(Jet | Gluon))] with the truth label (1 for quark, 0 for gluon). I also noted they spent the 10 last epochs trying to optimise the AUC with: "Binary JUNIPR parameters were decided upon by evaluating the AUC (area under the ROC curve) on the validation set 10 times per epoch and choosing the model that achieved the maximal AUC during the final 10 training epochs." 
-    
-    * Small inconsistencies on what loss was propagated: sometimes it was the batch loss, sometimes it was the batch loss averaged over the batch size. From now on, is the latter. 
-
-* Before fixing this, I ran three binary trainings, each time for 20 epochs and using the 50 epochs-trained unary JUNIPR on 300k jets for train+val+test of the old architecture (meaning simple RNN cells with hidden state of size 10 3 MLP of 10 units in a single layer for daughter, mother, and ending branch). The model still had all the bugs above that are now fixed. The bugs + the vastly underpowered architecture + the small dataset for large phase-space are important to note: incredible performances are not to be expected. It is only a gauge of whether the model is already doing something smarter than random guessing. The most promising implementation was the one using the fixed objective binary cross-entropy of sigmoid of ratio with used labels. The used label is the truth label when it 0 or 1 and the dataset label when the truth is -1 (the dataset label is 1 for ttbar and 0 for dijet). 
-    * What follows is the ROC curve for the good labels (restricting the data to samples having a truth label of 0 or 1, shown left) and the used labels (right):
-
+* I have spent a lot of time making the network more efficient. This demanded a lot of exploration. 
+    * I turned all my losses in batch form. It has barely any advantage for the start of training (the batch size of 10 is not sufficient to see the effect arising) but it massively speeds things up for larger batch (up to 8 times faster). 
+    * To do this efficiently, I had to use masking tensors and therefore slightly increased the input data. I realised that the time to load a batch was  significant (particularly for small batch, as it took more time to load a batch than to compute the loss). I therefore explored some options to perform this faster and am starting to use parallel workers for preparing batch (so that batch preparation is no longer an issue). Problem is that python refuses to have // access to the same list without copying the data which generated a massive data leaked that killed most of my job on Condor (this was weirdly not an issue on pplxint). I countered that issue by wrapping the list in a manager.list() from multiprocessing which seemed to do the trick (no more data leak) but somehow Condor does not like this after a while and abruptly kills the job. i do not know as of know where the issue comes from. If I cannot solve it, it is not so detrimental to run with // batch processing (increases on slightly the time). 
+ 
+ * I have almost finished processing the junipr dataset in final version. It will contain about 1.8 M jets from both types (I called such datasets "matched"). I am working on a scaling function to cut down the gluon jets from the dijet samples into a way that makes them have the exact same energy distribution (it's not too complicated thanks to the fact they are far more dijet jets than ttbar ones). I believe this is the easiest way of making the distribution truly energy independent (Aaron did not seem to find a different solution). Currently, the dijet energy distribution of jets looks like this (regular scale left and log scale right):
+ 
     <p float="center">
-    <img src="Readme_Result/Result_Binary_Model1_20epoch_ppl_50epochsUnary/ROC_curve_good.png" width="350" />
-    <img src="Readme_Result/Result_Binary_Model1_20epoch_ppl_50epochsUnary/ROC_curve_used.png" width="350" />
+    <img src="Readme_Result/New_Dijet/jetE.png" width="350" />
+    <img src="Readme_Result/New_Dijet/jetE_log.png" width="350" />
     </p>
-
-    * And here are the associated confusion matrices (using a threshold of 0.5) with good labels left and used labels right:
+    I am going to force it match the ttbar quark distribution. 
     
-    <p float="center">
-    <img src="Readme_Result/Result_Binary_Model1_20epoch_ppl_50epochsUnary/confusion_matrix_normalised_good_labels.png" width="350" />
-    <img src="Readme_Result/Result_Binary_Model1_20epoch_ppl_50epochsUnary/confusion_matrix_normalised_used_labels.png" width="350" />
-    </p>
-
-    * Clearly, the result is not good (AUC for NN and BDT reached about 0.73 and they reached 0.899 for the binary JUNIPR paper on a very specific dataset) but as mentioned above this is somewhat expected (actually a good sign for a network having a badly implemented branch and blurred data). The somewhat positive news is that it is doing better than random guessing. This motivated an intense re-reading to correct bugs and implements some improvements.
-    
-* Here are the ameliorations I implemented: 
-    * I implemented a whole new scaling function using the properties of the function <i>log( 1 + alpha X variable) / log(1 + alpha X expected_limit)</i> where <i>alpha</i> is a parameter controlling the curvature of the scaling (how steep it goes from the start), <i>expected_limit</i> is the expected upper limit of the <i>variable</i>. This function scales the <i>variable</i> from the range [0, <i>expected_limit</i>] to [0, 1] and accepts overflow (though they will very slowly depart from 1). Negative values are not accepted (except if alpha X variable is above -1). I have checked that none of my signals is negative on a batch of 400 items (so I'd say it is very unlikely). I selected the values of <i>alpha</i> and <i>expected_limit</i> based on the plots I have of the dijet and ttbar processes (the values chosen are the same for the two processes of course). Implementing these transformations, I did not observe any overflow (nor underflow) for the daughter branch (the one that gets discretised and for which being out of the range means losing some information). There are a few cases where the mass and energy of momenta are above 1: not an issue as this does not get discretised and is always very closet to 1 (never more than 2) so very little parametric shift is endured. 
-        * Branching <i>z</i> scaling: the range is [0, 1/2] (since fraction of energy of the lowest daughter, cannot exceed 1/2). Alpha was chosen to have more weight at the intermediary values of 0.2 to 0.4 (I observed most of the data had such values). This is the scaling function:
+    * As mentioned several times, I am now matching the ttbar quark samples to the dijet gluon samples. It means I am actively isolating quark from the ttbar and gluon from dijet. I am doing this as the tasked of weak supervision is more difficult (the signals suffer from a lot of pollution: about a third to a fourth of the jets in a dataset are from the other label) and I would like to compare the result to the JUNIPR ones (I am already generalising quite a bit by using calo cells instead of actual particles and not restraining in energy). It would also be unfair to compare the discriminative output of a weakly trained algorithm to a fully supervised one (their job is far easier). The weak supervision context would of course be something interesting to study if more time was available. 
+    * I have trained unary models with the bugs of last week fixed (but still containing the bug of this week) and finished training a unary model for quark with the bug uncovered this week fixed. Interesting to compare the probability distributions learnt. On the left it is the probability distributions learnt by the model with a bug and on the right the new one that should be fixed. 
+        * Probability for a jet to end after given number of nodes: 
         <p float="center">
-        <img src="Readme_Result/Scaling/z_scaling.png" width="700" />
+        <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/ending_distribution.png" width="350" />
+        <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2/ending_distribution.png" width="350" />
         </p>
-    
-        * Branching <i>delta</i> scaling: the range is [0, pi] (maximum angle between two particle is naturally pi). Alpha was chosen to have more weight at the very small values of 0 to 0.02 (most of the data had such values: logical since this is the angle between the mother and the hardest daughter, which has to be the one most aligned to the mother by energy-momentum conservation). This is the scaling function:
-        <p float="center">
-        <img src="Readme_Result/Scaling/delta_scaling.png" width="700" />
-        </p>
-    
-        * Branching and momenta <i>theta</i> scaling: the range is [0, pi] (maximum angle between two particle is naturally pi). Alpha was chosen to have more weight at the low values of 0 to 1 (most of the data had such values). This is the scaling function:
-        <p float="center">
-        <img src="Readme_Result/Scaling/theta_scaling.png" width="700" />
-        </p>
-    
-        * Branching and momenta <i>phi</i> scaling: this one is an exception. The range is indeed restricted to [0, 2 X pi] and every value is (roughly) equiprobable. This is therefore linearly scaled to [0, 1] by diving the variable by 2 X pi.
-    
-        * Momenta <i>energy</i> scaling: there is no natural upper limit since I did not restrain my data in energy. So theoretically it is [0, infinity[ but in practise, observing the distribution of constituent energy, it is very unlikely to have something above 700 GeV (first plot below). I therefore used the set [0, 700] GeV. Alpha was chosen to have more weight at the low values of 0 to 200 (most of the data had such values). First is the <b>constituent</b> energy distribution (dijet left, ttbar right) and second is the scaling function:
-        <p float="center">
-        <img src="Readme_Result/Scaling/constituentE_log_dijet.png" width="350" />
-        <img src="Readme_Result/Scaling/constituentE_log_ttbar.png" width="350" />
-        </p>
-        <p float="center">
-        <img src="Readme_Result/Scaling/energy_scaling.png" width="700" />
-        </p>
-    
-        * Momenta <i>mass</i> scaling: same problem as for energy. I used the set [0, 50] GeV. Alpha was chosen to have more weight at the low values of 0 to 30 (most of the data had such values). First is the <b>jet</b> mass distribution (dijet left, ttbar right) and second is the scaling function:
-        <p float="center">
-        <img src="Readme_Result/Scaling/jetMass_dijet.png" width="350" />
-        <img src="Readme_Result/Scaling/jetMass_ttbar.png" width="350" />
-        </p>
-        <p float="center">
-        <img src="Readme_Result/Scaling/mass_scaling.png" width="700" />
-        </p>
-
-    * To improve the efficiency of the models learnt, I implemented both a learning rate schedule and a batch size schedule. Options are to use the ones the JUNIPR paper followed or self-defined versions. 
-
-* I have been running a quark and gluon models on the full data I have. The data has been processed to be made of an equal number of purely labelled jets. This means that the dijet data is now cut to be made solely of gluon jets (label 0) and the ttbar one made of pure quark jets (label 1). This makes the global task easier and is comparable to what they used in the JUNIPR paper (will make it possible to compare with their result). To make sure little bias was endured, I further cut the dijet dataset to have as many jets as the ttbar.  This leaves me a total of 476,686 jets of each label of which 381,328 are used for training (this is somewhat comparable in number to JUNIPR although they restricted to a specific energy window). I have been running on this dataset, that I call it <i>full balanced</i>, to train a quark and a gluon models. I have also increased the padding size to 120 (to avoid cutting events with a large number of constituents). The architecture was slightly changed: it now uses a LSTM cell of hidden size 30. To initiate its hidden state, a simple 10 hidden-unit MLP model is used to map seed_momentum to a first hidden_state. A similar MLP (not the same!) is used to map seed_momentum to a first cell_state (LSTM use two pieces of hidden information). The rest of the network has changed much except for the daughter branch. Instead of a single MLP predicting the 4 * granularity values of the branching (granularity being the number of bins used in the discretisation of the variables in the range [0, 1]), there are now 4 MLP's of 10 hidden units. 
-    * The one for z received the hidden state of the LSTM and the mother momentum. 
-    * The one for theta received the same info + the bin of z. 
-    * The one for delta received the same info as the one for theta + the bin of theta. 
-    * The one for phi receives the same info as the one for delta + the bin of delta (so the branching likelihood is in fact further parametrised by each variable).
-
-* To follow the steps of JUNIPR, I am using a learning rate schedule as follow:
-<p float="center">
-<img src="Readme_Result/schedule_model2.png" width="600" />
-</p>
-
-* This has already been training for two days (should reach the end this morning). Here are the learning curves for the gluon (left) and quark (right) models so far:
-
-<p float="center">
-<img src="Readme_Result/Temp_training/learning_curve_gluon.png" width="350" />
-<img src="Readme_Result/Temp_training/learning_curve_quark.png" width="350" />
-</p>
-
-* To improve the accuracy of the study, I have already started collecting more data. I have doubled my amount of ttbar jets (downloaded myself more data files) and have already processed them into JUNIPR jets. I have reprocessed the dijet (old one) + global ttbar (old+new) with an additional cut inspired by JUNIPR: I now remove any final state constituent that has an energy below 0.5 GeV (this occurs before the number of constituent cut so this may remove some jets too). This is a sanity check: node are not preferentially weighted in the likelihood of the tree. Hence, nodes with constituents of such low energies (that may easily be poorly described given how small their energy is) might be poorly described and reduce the accuracy of the model. The JUNIPR paper used a cut of 1 GeV, so mine not very strong. In fact, I notice that for the dijet dataset, this removes 5 jets on a set of 916,786 (so only but 0. 000545 % of them) and 336 constituents on a set of 13814783 (so only but 0.00243 %). Perhaps I should move to a 1 GeV cut. I have previously tried a 0.5 GeV cut combined with a delta R to jet of at least 0.1 (I had the impression that it is what JUNIPR did): this was very bad as many jets were no longer reconstructed as a single jet (the R cut at the effect of removing the core) and I have thus discarded this set. I am also trying to increase my dijet set but this requires more care and Aaron is working on getting a sample without the strange peak observed last week (see next point). 
-
-* Last week, we observed that the pT and energy distribution of the dijet dataset showed two peaks: one focus close to 0 and one at higher values (400 GeV for pT and 500 GeV for energy). Indeed, here are for the dijet sample the pT (left) and energy (right):
-    <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet/jetPt.png" width="350" />
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet/jetE.png" width="350" />
-    </p>
-    
-    * As discussed last week, I analysed the issue by implementing some further cut. Isolating quark jets energy (left) and gluon jets energy (right) showed that quarks are overly represented in this secondary peak:
+        Note the slight disagreement for the old model (left) due to the wrong implementation. The new model does not exhibit this. 
+         
+         * Probability for a mother to be the next one to decay in an energy-ordered list of particles existing at the given timestep: 
+         <p float="center">
+         <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/mother_id_distribution.png" width="350" />
+         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2mother_id_distribution.png" width="350" />
+         </p>
+         
+         * Probability distribution of the z-branch: 
+         <p float="center">
+         <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/branch_z_distribution.png" width="350" />
+         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2/branch_z_distribution.png" width="350" />
+         </p>
+         This will be modified in the new dataset since constituents with less than 1 GeV are now removed. 
+         
+         * Probability distribution of the theta-branch: 
+         <p float="center">
+         <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/branch_theta_distribution.png" width="350" />
+         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2/branch_theta_distribution.png" width="350" />
+         </p>
+         I maybe should adapt the scaling to avoid empty bins. Problem is that it might reduce sensitivity in the important range (or will lead to discontinuous scaling).
+         
+         * Probability distribution of the phi-branch: 
+         <p float="center">
+         <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/branch_phi_distribution.png" width="350" />
+         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2/branch_phi_distribution.png" width="350" />
+         </p>
+         The one where the new model show the most error. This is quite normal as the phi distribution is in fact quite free (all phi values should be as likely))
+         
+         * Probability distribution of the delta-branch: 
+         <p float="center">
+         <img src="Readme_Result/assessing_quark_50e_bsSCHED_lrSCHED_secondI_fData/branch_delta_distribution.png" width="350" />
+         <img src="Readme_Result/assess_quark_50e_bsSCHED_lrSCHED_thirdI_fMData_Model2/branch_delta_distribution.png" width="350" />
+         </p>
+         I maybe should adapt the scaling to avoid empty bins. 
+         
+* I have trained a binary model with the bug of this week in. It's an interesting situation that amounts to asking: can you understand (derive a correct likelihood model) for a jet based on an internal information based on the daughter produced by the node rather than by the pair of daughters (with one of them being the mother). There is also an added difficulty to model the probability for the tree to end (last ending). The model used the matched dataset (equal number of pure labels of quark and gluon from ttbar and dijet respectively, with 762,656 jets in total for training, 38,142 for validation (used during training to assess the performance), and152,574 for the test at the end. The performance is already dramatically better than before (which had a AUC of 0.624) and this is still a wrongly implemented model !!! The accuracy obtained (by simply rounding) was 0.675 with a confusion matrix is displayed left (right is the ROC curve):
 
     <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/quark/jetE.png" width="350" />
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/gluon/jetE.png" width="350" />
+    <img src="Readme_Result/model_2_pplxint/confusion_matrix_normalised_used_labels.png" width="350" />
+    <img src="Readme_Result/model_2_pplxint/ROC_curve.png" width="350" />
     </p>
 
-    * This is also visible when adding a pT cut removing events below 300 GeV. Indeed, here are how the sample is populated before (left) and after all cuts (right):
-    <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/above_peak/isTruthQuark_Before_cuts.png" width="350" />
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/above_peak/isTruthQuark.png" width="350" />
-    </p>
+* To push things further, I will be running the last implementation of the model on the hugely extended dataset. To help with this process, I am considering moving to a GPU on the ARC. It is indeed quite difficult to train on Condor as this is highly unstable (jobs get killed because of the weather in the UK for example), communicates extremely poorly (no error log), and seems very bad at parallel processing (only CPU's and the num_worker seems to be something that likes to crash on Condor). I have the not so little issue that currently the whole dataset must be kept in memory (it's going to be of about 25 GeV so it works on Condor) but I believe I can cut this into chunks and ask PyTorch to load a chunk and store it as long as it needs to (might require some significant adaption). It might be possible to require as much memory on the ARC too in which case this is not really an issue (I would of course only move to the GPU a processed batch, not the whole dataset).
 
-    * Aaron agrees that this is due to the samples he downloaded coming from different slices in pT. He is working on getting a sample that is not biased. Once ready, I'll process it into JUNIPR jets.  Concerning the model currently running, it should not be too dramatically impacted by this secondayr peak as I remove the quark jets from the dijet sample (I remove the gluon jets from the ttbar sample). Here is the distribution of energy for the glon jets (left, all for dijet) and quark jets (right, all from ttbar) used in the matched distribution (the dataset used for running the new unary models):
-    <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6_train.json_energy_log.png" width="350" />
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6_train.json_energy_log.png" width="350" />
-    </p>
-    <p float="center">
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6_train.json_energy.png" width="350" />
-    <img src="Readme_Result/Full_DAOD_JETM6/dijet_more_cuts/matched/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6_train.json_energy.png" width="350" />
-    </p>
-
-* I have analysed the miss-reconstructed jets during the JUNIPR processing (feeding a set of particles that have been reclustered into a single jet using anti-kT algorithm with radius 0.4 to the C/A algorithm with radius 0.5). These are specifically the ones coming from the full data (dijet + ttbar) with the E_sub cut of 1/2 GeV (so constituents with less than this are removed). What follows are an example of two eta-phi maps of constituents and how they are reclustered (based on the marker with the black marker indicated the reconstructed jet, the other colour indicates energy of constituent):
-    <p float="center">
-    <img src="Readme_Result/Maps/19.png" width="350" />
-    <img src="Readme_Result/Maps/5.png" width="350" />
-    </p>
-
-* These two maps indicate the two limit scenarios: either the jet is globally reconstructed with a small number of forgotten components (left) or it is cut into several well-furnished jets (right). To study the prevalence of each scenario, I analysed all miss-reconstructed jet for dijet, ttbar and the new ttbar dataset with the E_sub < 1/2 GeV cut. The result is summarised in the next histogram that displays the count for size of largest and smallest jet reconstructed (all cases add two jets reconstructed, never more):
-<p float="center">
-<img src="Readme_Result/Maps/histogram_number_constituents.png" width="600" />
-</p>
+* I am going to be collecting the h5 dataset and run the NN on it (and, if time permits, the BDT. Training the NN is safer as I have access to the training loop with the BDT does it alone with fit). 
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
 
@@ -154,4 +98,5 @@ An ATLAS dataset browser is available here [AMI](https://ami.in2p3.fr) and requr
 
 A short explanation on variables is available [here](https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/Run2JetMoments) but requires a TWIKI access. 
 
-The JUNIPR framework is implemented on [this github page](https://github.com/andersjohanandreassen/JUNIPR)
+The [JUNIPR framework](https://arxiv.org/abs/1804.09720) is implemented on [this github page](https://github.com/andersjohanandreassen/JUNIPR)
+
