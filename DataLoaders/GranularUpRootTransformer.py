@@ -71,6 +71,7 @@ class GranularUpRootTransformer(ABC):
         self.save_tables_bool = config.get(["GranularUpRootTransformer", "save_tables"])
         self.save_csv_bool = config.get(["GranularUpRootTransformer", "to_CSV"])
         self.save_hdf_bool = config.get(["GranularUpRootTransformer", "to_HDF5"])
+        print("Saving to H5? ", self.save_hdf_bool)
         self.clean_jets_bool = config.get(["GranularUpRootTransformer", "clean_jets"])
         
         self.do_JUNIPR_transform_bool = config.get(["GranularUpRootTransformer", "JUNIPR_transform"])
@@ -83,11 +84,13 @@ class GranularUpRootTransformer(ABC):
         self.add_cut = config.get(["GranularUpRootTransformer", "add_cut"])
         self.special_cut_junipr_bool = config.get(["GranularUpRootTransformer", "special_cut_junipr", "special_cut_bool"])
         self.special_cut_junipr_param = config.get(["GranularUpRootTransformer", "special_cut_junipr", "param"])
-        """
-        add_to_path = ""
-        if self.clean_jets_bool:
-            add_to_path = "tri_cut_"
-        """
+        self.purify_cut_bool = config.get(["GranularUpRootTransformer", "purify_cut"])
+        self.pure_label_required  = config.get(["GranularUpRootTransformer", "purify_cut_val"])
+        
+        
+        self.energy_histogram_limitor_path = config.get(["GranularUpRootTransformer", "energy_histogram_limitor_path"])
+        self.energy_histogram_limitor_bool = config.get(["GranularUpRootTransformer", "energy_histogram_limitor"])
+
         self.save_path_junipr = os.path.join(self.path, 'junipr/')
         self.save_path_csv = os.path.join(self.path, 'CSV/')
         self.save_path_hf = os.path.join(self.path, 'HF/')
@@ -170,22 +173,19 @@ class GranularUpRootTransformer(ABC):
             c_pdf = c_pdf_all
             j_pdf = j_pdf_all
         
-        """
-        # this is an additional control to remove constituents with an energy below E_sub and a radius to jet below R_sub
-        # WARNING: not working as expected: the number of constituents is a j_pdf info. Implementing this at the level of the algorithm
-        if self.special_cut_junipr_bool:
-            E_sub = self.special_cut_junipr_param[0]
-            R_sub = self.special_cut_junipr_param[1]
-            drop_bad_constituents_indices = c_pdf[(c_pdf['constituentE'] < E_sub)       |
-                                                  (c_pdf['constituentDeltaRtoJet'] < R_sub)].index
-            c_pdf.drop(drop_bad_constituents_indices, inplace=True)
-        """
-        
         print("Initial shape jet ", j_pdf.shape)
+        
         if self.clean_jets_bool:
-            drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] < 20)       |
-                                         (j_pdf['isNotPVJet'] == 1)  |      # This means your jet is not at the primary vertex (it's on another vertex)
-                                         (j_pdf['jetNumberConstituent'] <= 4)].index
+            if self.purify_cut_bool:
+                print("Restricting to a pure sample of label {}".format(self.pure_label_required))
+                drop_bad_jet_indices = j_pdf[(j_pdf['isTruthQuark'] != self.pure_label_required)  |
+                                             (j_pdf['jetPt'] < 20)       |
+                                             (j_pdf['isNotPVJet'] == 1)  |      # This means your jet is not at the primary vertex (it's on another vertex)
+                                             (j_pdf['jetNumberConstituent'] <= 4)].index
+            else:
+                drop_bad_jet_indices = j_pdf[(j_pdf['jetPt'] < 20)       |
+                                             (j_pdf['isNotPVJet'] == 1)  |      # This means your jet is not at the primary vertex (it's on another vertex)
+                                             (j_pdf['jetNumberConstituent'] <= 4)].index
             j_pdf.drop(drop_bad_jet_indices, inplace=True)
             if self.add_cut == "isolate_q_truth":
                 drop_bad_jet_indices = j_pdf[(j_pdf['isTruthQuark'] !=1)].index
@@ -207,6 +207,41 @@ class GranularUpRootTransformer(ABC):
         print("Final shape constituent ", c_pdf.shape)
 
         return c_pdf, j_pdf
+
+    def energy_cleaning(self, constituent_pdf, jet_pdf):
+        """
+        This restricts the data to a given number of jet per energy bin.
+        This number per bin is loaded from the self.energy_histogram_limitor_path.
+        """
+        print("Doing an extra cutting step to restrict the energy distribution to that of {}".format(self.energy_histogram_limitor_path))
+        
+        jet_pdf['jetE_binned'] = np.floor(jet_pdf['jetE'])
+        limiting_array = np.loadtxt(self.energy_histogram_limitor_path, delimiter=',', dtype='int')[0, :]
+        #resulting_j_pdf = pd.DataFrame(columns = jet_pdf.columns)
+        resulting_j_pdf = pd.DataFrame({i[0]: pd.Series(dtype=i[1]) for i in jet_pdf.dtypes.iteritems()}, columns=jet_pdf.dtypes.index)
+
+
+        for bin_idx, bin_value in enumerate(limiting_array):
+            if bin_value != 0:
+                if bin_idx == 4000:
+                    sub_data_to_add = jet_pdf[jet_pdf['jetE_binned'] >= float(bin_idx)][:bin_value]
+                else:
+                    sub_data_to_add = jet_pdf[jet_pdf['jetE_binned'] == float(bin_idx)][:bin_value]
+                if len(sub_data_to_add) == 0:
+                    print("Empty at bin {} and expecting {}".format(bin_idx, bin_value))
+                    continue
+                resulting_j_pdf = resulting_j_pdf.append(sub_data_to_add, ignore_index=True)
+
+        resulting_j_pdf.drop(['jetE_binned'], axis = 1, inplace=True) #drop the discretised column
+        j_pdf_small = resulting_j_pdf[['entry', 'subentry']]
+
+        print("Shape before energy cut of jet ", jet_pdf.shape)
+        print("Shape after energy cut of jet ", resulting_j_pdf.shape)
+        print("Shape before energy cut of constituent ", constituent_pdf.shape)
+        c_pdf = pd.merge(constituent_pdf, j_pdf_small, how='inner', left_on=['entry', 'constituentJet'], right_on=['entry', 'subentry'])
+        print("Shape after energy cut of ", c_pdf.shape)
+    
+        return c_pdf, resulting_j_pdf
     
     def run_uproot(self):
         """
@@ -222,6 +257,7 @@ class GranularUpRootTransformer(ABC):
             file_name = file_name.split(".")[:5]
             file_name = "_".join(file_name)
             print("Processing : ", file_name)
+            print("the whole file is ", file)
 
             # List of variables
             constituent_vars = Specific_Set4_Parameters.qg_constituent_vars
@@ -244,21 +280,31 @@ class GranularUpRootTransformer(ABC):
                 # These happen before cleaning
                 self.diagnostic_plots(constituent_pdf, file_name, ['constituentE'], additional_text = "_Before_cuts")
                 self.diagnostic_plots(jet_pdf, file_name, ['isNotPVJet', 'isTruthQuark', 'jetSumTrkPt500', 'jetNumTrkPt500'], additional_text = "_Before_cuts")
-                # Some constituent to jet comparison
             
             constituent_pdf, jet_pdf = self.event_cleaning(constituent_pdf, jet_pdf)
             
+            if self.energy_histogram_limitor_bool:
+                
+                if self.diagnostic_bool:
+                    # These happen before the final cleaning
+                    self.diagnostic_plots(constituent_pdf, file_name, ['constituentE'], additional_text = "_Before_Energy_cuts")
+                    self.diagnostic_plots(jet_pdf, file_name, ['isNotPVJet', 'isTruthQuark', 'jetSumTrkPt500', 'jetNumTrkPt500', 'jetE', 'jetPt', 'jetEta','jetPhi','jetMass'], additional_text = "_Before_Energy_cuts")
+                constituent_pdf, jet_pdf = self.energy_cleaning(constituent_pdf, jet_pdf)
+                print("Is anything null in jet pdf after energy clean ? ",jet_pdf.isnull().values.any())
+    
             if self.save_tables_bool:
                 if self.save_csv_bool:
-                    self.save_to_csv(constituent_pdf, file_name+"_constituents")
+                    #self.save_to_csv(constituent_pdf, file_name+"_constituents")
                     self.save_to_csv(jet_pdf, file_name+"_jets")
                 
                 if self.save_hdf_bool:
-                    self.save_to_h5(constituent_pdf, file_name+"_constituents")
+                    print("Saving to H5")
+                    #self.save_to_h5(constituent_pdf, file_name+"_constituents")
                     self.save_to_h5(jet_pdf, file_name+"_jets")
         
             if self.diagnostic_bool:
                 self.diagnostic_plots(constituent_pdf, file_name, constituent_vars)
+                print("Available jet info: ", jet_pdf.columns)
                 self.diagnostic_plots(jet_pdf, file_name, jet_vars)
                 # Some constituent to jet comparison
                 self.compare_dataset_info(jet_pdf, constituent_pdf, file_name)
@@ -327,6 +373,8 @@ class GranularUpRootTransformer(ABC):
             if plot_name in Specific_Set4_Parameters.skip_hist:
                 continue
             print(plot_name)
+            #if plot_name == 'jetNumTrkPt500':
+            #print(df[plot_name])
             fig = plt.figure(p)
             ax = fig.add_subplot(1, 1, 1)
             df.hist(column=plot_name,

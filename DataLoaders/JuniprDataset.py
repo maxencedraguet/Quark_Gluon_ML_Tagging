@@ -48,7 +48,7 @@ class JuniprDataset(Dataset):
     granularity is the size of the binning of branching info into x (variables are forced to take values between 0 and 1). This is followed by one-hot encoding.
     """
     
-    def __init__(self, json_file, train_bool, transform):#config: Dict):
+    def __init__(self, json_file, train_bool, transform, manage_with = None):#config: Dict):
         """
         Receives the json_file with the data to process as well as the root directory
         Transform is an option to be applied to samples (to scale, pad and modify them).
@@ -58,8 +58,10 @@ class JuniprDataset(Dataset):
         self.json_file = json_file
         #manager = Manager()
         with open(self.json_file) as json_file:
-            #self.data_array = manager.list(json.load(json_file)['JuniprJets']) #a list of dictionnaries
-            self.data_array = json.load(json_file)['JuniprJets'] #a list of dictionnaries
+            if manage_with:
+                self.data_array = manage_with.list(json.load(json_file)['JuniprJets'])
+            else:
+                self.data_array = json.load(json_file)['JuniprJets'] #a list of dictionnaries
         self.data_size = len(self.data_array)
         #self.transform = config.get(["JuniprDataset", "transform"])
         self.train_bool = train_bool
@@ -977,7 +979,7 @@ class AddExtraLabel(object):
 class CorrectTrueLabel(object):
     """
     This special transform modifies the label of the sample if it is -1 (an incorrectly labelled sample). It replaces such sample by the fed value.
-    Used to correct teh quark-rich -1 labels to 1 and gluon-rich -1 labels to 0.
+    Used to correct the quark-rich -1 labels to 1 and gluon-rich -1 labels to 0.
     
     Note that when testing, the original label is conserved in original_label
     """

@@ -27,7 +27,7 @@ from .BaseDataLoader import _BaseDataLoader
 
 import numpy as np
 import pandas as pd
-pd.set_option('display.max_rows', None)
+#pd.set_option('display.max_rows', None)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 

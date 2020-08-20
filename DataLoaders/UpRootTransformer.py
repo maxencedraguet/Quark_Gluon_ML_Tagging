@@ -114,7 +114,6 @@ class UpRootTransformer(ABC):
         pdf.drop(drop_indices_quality , inplace=True)
                                        
         drop_indices = pdf[(pdf['numPrimaryVertices'] == 0) |
-                           (pdf['numPrimaryVertices'] == 0) |
                            (pdf['hasBadMuon'] == 1)         |
                            (pdf['hasCosmic'] == 1)          |
                            (pdf['PVnumTrk'] < 2)].index
