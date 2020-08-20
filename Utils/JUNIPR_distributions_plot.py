@@ -35,7 +35,7 @@ plot_axis = {
                 'mother_id'        : [-0.5, 15.5, 0, 1],
                 'branch_z'         : None,
                 'branch_theta'     : None,
-                'branch_phi'       : None,
+                'branch_phi'       : [0, 2* np.pi, 0, 0.15],
                 'branch_delta'     : None
                 }
 

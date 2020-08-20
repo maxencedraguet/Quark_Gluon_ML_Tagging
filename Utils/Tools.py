@@ -117,7 +117,7 @@ def ROC_curve_plotter_from_files(list_of_files, save_path):
     plt.xlabel('False positive rate')
     plt.ylabel('True positive rate')
     plt.title('ROC Curves')
-    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    lgd = plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     #plt.legend(bbox_to_anchor=(1.04,1), loc="upper left")
     plt.savefig(os.path.join(save_path, 'ROC_curve.png'), dpi=300, format='png', bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.close()
