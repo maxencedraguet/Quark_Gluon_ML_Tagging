@@ -1,18 +1,18 @@
 # Quark-Gluon Tagging with Machine Learning - ATLAS Experiment
 ## Meetings
 ### Recent progress: 
-* Two massive dataset of about 3.6 M jets (quark + gluon) have been gathered. One with E_sub on constituent of 1 GeV and the other of 1/2 GeV. Both have the quark and gluon signals matched in energy distribution (they have the exact same energy distribution following that step). I have isolated an HDF5 jet table to run BDT's and DNN's, with 11 variables accessible:
+* Two massive datasets of about 3.6 M jets (quark + gluon) have been gathered. One with E_sub on constituents of 1 GeV and the other of 1/2 GeV. Both have the quark and gluon signals matched in energy distribution (they have the exact same energy distribution following that step). I have isolated an HDF5 jet table to run BDT's and DNN's, with 11 variables accessible:
     *  jetPt, jetEta, jetPhi, jetMass, jetE, jetWidth, 
     * jetEMFrac, jetChFrac, 
     * jetNumTrkPt500, jetNumTrkPt1000, jetSumTrkPt500
     
-* To use such massive databases, I have developped a chunk-approach to the JUNIPR dataset. Each dataset is seperated into chunks of recorded size. In the JuniprLargeDataset definition, based on the index (going from 0 to the total number of events available), it will either read the data from the chunk in memory or load a new chunk and place it in memory. This means a single chunk is kept in memory at a given time. I have not take the time to make this system run with parallel processing as it is very difficult to manage shared information in this way (it could easily lead to erroneous behaviour where two parallel processor read different file and hence they keep loading new chunks, an expensive process.). The system has been checked to work as expected. There is a non-neglible overhead due to I/O of the chunk data but this is unavoidable (in fact, I have checked that CONDOR could not manage having the quark and gluon full datasets openend at once). 
+* To use such massive databases, I have developed a chunk-approach to the JUNIPR dataset. Each dataset is separated into chunks of recorded size. In the JuniprLargeDataset definition, based on the index (going from 0 to the total number of events available), it will either read the data from the chunk in memory or load a new chunk and place it in memory. This means a single chunk is kept in memory at a given time. I have not taken the time to make this system run with parallel processing as it is very difficult to manage shared information in this way (it could easily lead to erroneous behaviour where two parallel processors read different files and hence they keep loading new chunks, an expensive process.). The system has been checked to work as expected. There is a non-negligible overhead due to I/O of the chunk data but this is unavoidable (in fact, I have checked that CONDOR could not manage having the quark and gluon full datasets opened at once). 
 
     * I have cut the data for the E_sub 1/2 GeV  into two chunked version: one random (any energy) and the other one by energy. The idea is to use the first one for global training and the second one to isolate an energy range for training.
     
-    * I have trained DNN on the HDF5 data and the 11 variables listed above. On the left is the ROC curve of a model with 2 32-unit hidden layers, weight decay of 0.0001, trained for 20 epochs. On the right is a model with 2 64-units hidden layers, weifht decay of 0.0001 trained for 40 epochs. 
+    * I have trained DNN on the HDF5 data and the 11 variables listed above. On the left is the ROC curve of a model with 2 32-unit hidden layers, with a weight decay of 0.0001 (L2 regularisation) , trained for 20 epochs. On the right is a model with 2 64-units hidden layers, with a weight decay of 0.0001 (L2 regularisation) trained for 40 epochs. 
 
-* I have finished running different iteration of unary and binary JUNIPR's. All binary version that have finished training were on the E_sub 1 GeV dataset. Clearly the models have their performance saturated. The AUC they obtain is slightly lower than that previously managed on the MultiJet sample (it was around 0.732): this is surely due to the energy matching removing some difference between the two jet families. 
+* I have finished running different iterations of unary and binary JUNIPR's. All binary versions that have finished training were on the E_sub 1 GeV dataset. Clearly, the models have their performance saturated. The AUC they obtain is slightly lower than that previously managed on the MultiJet sample (it was around 0.732): this is surely due to the energy matching removing some difference between the two jet families. 
     <p float="center">
     <img src="Readme_Result/ResultBDTNN/Assessing_NN_32_32_20e_lr001_bs200_wd0001_comMdata/ROC_curve.png" width="350" />
     <img src="Readme_Result/ResultBDTNN/assessing_NN_model_64_64_50e_lr001_bs200_wd0001_comMdata/ROC_curve.png" width="350" />
@@ -22,7 +22,7 @@
 <img src="Readme_Result/ResultBDTNN/ROC_curve.png" width="600" />
 </p>
 
-* Now the disappointing result is that binary JUNIPR trained on the similar data (with E_sub 1 GeV) is performing significantly worse. On the left is a binary JUNIPR using unaries trained for 6 epochs and on the right using unaries trained for 16 epochs (there is some variance in the result so the difference is not significant). Clearly not optimal: what follows is a long list of experiment ran to try to understand why it is performing in such underwelming manner. 
+* Now the disappointing result is that binary JUNIPR trained on similar data (with E_sub 1 GeV) is performing significantly worse. On the left is a binary JUNIPR using unaries trained for 6 epochs and on the right using unaries trained for 16 epochs (there is some variance in the result so the difference is not significant). Clearly not optimal: what follows is a long list of experiment ran to try to understand why it is performing in such underwhelming manner. 
 <p float="center">
 <img src="Readme_Result/ResultBDTNN/JUNIPR/ROC_curve6.png" width="350" />
 <img src="Readme_Result/ResultBDTNN/JUNIPR/ROC_curve16.png" width="350" />
@@ -40,7 +40,7 @@
 <img src="Readme_Result/ResultBDTNN/JUNIPR/acc_curve.png" width="350" />
 </p>    
 
-* Clearly every one of them is at saturation. "Worse" than this, the unaries are in fact learning their data distribution very well. Each pair of plot that follows is gluon left and quark right. 
+* Clearly, every one of them is at saturation. "Worse" than this, the unaries are in fact learning their data distribution very well. Each pair of plots that follows has gluon left and quark right. 
     * end:
     <p float="center">
     <img src="Readme_Result/ResultBDTNN/probability_distributions_g/ending_distribution.png" width="350" />
@@ -77,15 +77,15 @@
     <img src="Readme_Result/ResultBDTNN/probability_distributions_q/branch_delta_distribution.png" width="350" />
     </p>    
 
-* The fact the model failed to deliver improved result is therefore not just a question of training. But surprisingly  the first result I had this week was extremely good. Running on a much smaller dataset (700k jets in total for both labels), no E sub cut and no energy matching, I had the following binary JUNIPR result (50 epochs training of unaries and 26 epochs training of binary)
+* The fact the models failed to deliver nice results is therefore not just a question of training. But surprisingly  the first result I had this week was extremely good. Running on a much smaller dataset (700k jets in total for both labels), no E sub cut and no energy matching, I had the following binary JUNIPR result (50 epochs training of unaries and 26 epochs training of binary)
 <p float="center">
 <img src="Readme_Result/ResultBDTNN/OldJUNIPR/ROC_curve.png" width="600" />
 </p>
 
 * Here is the catch: the lack of energy matching between the quark and gluon. I believe it removes a lot of what the model uses to classify. Testing this model on the data with E sub 1 GeV and energy matching, the result obtained is far worse (left plot). On the contrary, testing the model that ran on 1 GeV E sub with energy matching on this smaller dataset, the result improved vastly (right).
 <p float="center">
-<img src="Readme_Result/ResultBDTNN/JUNIPR/special/ROC_curveFullOnCom.png" width="350" />
-<img src="Readme_Result/ResultBDTNN/JUNIPR/special/ROC_curveComOnFull.png" width="350" />
+<img src="Readme_Result/ResultBDTNN/special/ROC_curveFullOnCom.png" width="350" />
+<img src="Readme_Result/ResultBDTNN/special/ROC_curveComOnFull.png" width="350" />
 </p>    
  
  * I tried to improve the result in three ways (keeping the energy matching since removing it gives a useless scenario):
@@ -93,12 +93,12 @@
     * I chunked the data (E sub 1/2, in light of the previous result, I am going to do this for E sub 1 GeV too) in energy bins (by units of 100 GeV, up too 500 GeV which includes everything above). I am training models on the 100-200 GeV bin to see if it learns better. For the moment, the result does not suggest any improvement: in fact quite the opposit. This might be due to the fact the sample size is much smaller, at about 500 k jets in total - though the phase-space section is much more narrow.
     * I am running models with an increased architecture (hidden state size 30 -> 40 with all DNN have a 20-unit hidden layer instead of 10-unit one).
     
-* I am not sure that JUNIPR will end up winning here. In fact they are several reasons I think it is badly performing:
+* I am not sure that JUNIPR will end up winning here. In fact, there are several reasons I think it is badly performing:
     * It uses calorimeter cell constituents. I have observed that the sum of their energy is quite different from the jet energy. Clearly the jet variables gathered by athena have a higher degree of processing involved to construct them. Another issue with this is that it might be more sensitive to pile-up (the only thing that attacks PU is the cut removing jets not coming from the PV). 
     * The BDT and NN do still learn from the underlying process distribution. Even if the energy is matched, there is still some distribution of information that is different between the two sets of jets. For example, here are the pT distribution (gluon left, quark right). Matching in energy does not mean the whole signal is blind from the underlying physical process distributions. This means the NN and BDT models actually perform a slightly different taks than junipr: they are tagging quark and gluon based on global distributions while JUNIPR is tagging based on quark and gluon jet structure. The information content is not the same, hence the difference. 
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/jetPt_log_gluon.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/jetPt_log_quark.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/jetPt_log_gluon.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/jetPt_log_quark.png" width="350" />
     </p>    
     
     * Comparing to the JUNIPR paper, it uses a very different type of information. Calo-cell momenta have no mass, yet the input of the network are four-momenta with (energy, theta, phi, mass). Hence final state constituents have a useless variable (the mass is not null for intermediate state constituents). Also, given they are calo cells, the theta phi values it takes may actually just cover the entire jet energy deposit. THis means the angular information is not that granular compared to final state <b>particles</b>. These problems are unavoidable when working at the low-level. 
