@@ -1,7 +1,7 @@
-experiment_name:                    quark_50e_200b_secondI_fData # Experiment name.
+experiment_name:                    quark_16e_bsSCHED_lrSCHED_thirdI_comMdata05GeV_energy_100_200_largerModel
 use_gpu:                            False                     # Use a GPU if available.
 seed:                               1                         # Random seed to ensure reproducibility.
-dataset:                            Set4                      # Data to use (Set1, Set2, Set3, Set4...)
+dataset:                            Set4                      # Data to use (Set1, Set2, Set3, Set4, or Set5)
 logger_data:                        True                      # Whether to produce a txt file with information from training for JUNIPR
 
 # Path to the dataset directory. SHOULD MATCH THE DATASET INDICATED JUST ABOVE
@@ -10,18 +10,37 @@ logger_data:                        True                      # Whether to produ
 #   For Junipr dataset (Set 4) example: ../example_JUNIPR_data.json
 #   For Junipr dataset (Set 4): /data/atlas/atlasdata3/mdraguet/Set4/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6.json
 #   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500): /data/atlas/atlasdata3/mdraguet/Set4_tri_cut/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6.json
-#   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500) for quarks and gluons:
+#   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500) for quarks and gluons (called ppl):
 #   - /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
 #   - /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6
-#   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500) for quarks and gluons that have been limited to matching number of jets and pure labels:
+#   For Junipr dataset (Set 4) and tri cuts (pT, constituents and SumTrackPT500) for quarks and gluons that have been limited to matching number of jets and pure labels (called fData or fMData):
 #   - /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_pure_matched/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
 #   - /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_pure_matched/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6
-
+#   For Junipr dataset (Set 4) + 1 GeV E_sub cut for quarks and gluons in complete dataset (largest one!) that have been matched in number of jets and energy distriubtion (called comMdata):
+#   - /data/atlas/atlasdata3/mdraguet/Set4_dijet_esub1gev_pure_matched/mc16_13TeV_364702_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ0_to_12WithSW_deriv_DAOD_JETM6
+#   - /data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub1gev_pure_matched/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6
+#   The same in chunked version:
+#   - /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/gluon_jets_comMdata/
+#   - /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/quark_jets_comMdata/
+#   For Junipr dataset (Set 4) + 0.5 GeV E_sub cut for quarks and gluons in complete dataset (largest one!) that have been matched in number of jets and energy distriubtion (called comMdata05GeV):
+#   - /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/gluon_jets_comMdata05GeV/
+#   - /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/quark_jets_comMdata05GeV/
+#
+#   You can run on energy binned version of comMData2 (non chunk)
+#   /data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev_pure_matched_energy_chunked/
+#   /data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev_pure_matched_energy_chunked/
+#   Specify a bin with:     energy_bin_0_100_gluon_jets  energy_bin_100_200_gluon_jets   energy_bin_200_300_gluon_jets   energy_bin_300_400_gluon_jets   energy_bin_400_500_gluon_jets  energy_bin_500_inf_gluon_jets
+#                           energy_bin_0_100_quark_jets  energy_bin_100_200_quark_jets   energy_bin_200_300_quark_jets   energy_bin_300_400_quark_jets   energy_bin_400_500_quark_jets  energy_bin_500_inf_quark_jets
+#
+#   For Set5: the path to the directory: /data/atlas/atlasdata3/mdraguet/Set4_dijet_ttbar_esub1gev_matched_Completely_H5
+#           Must contain a gluon.h5 and a quark.h5 file.
+#
 #   For UpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set [2 or 3] /loader_list.txt
 #   For GranularUpRootTransformer: the complete path to a text file with the list of directories to load: /home/draguet/QGdis/Code/Data/Set4/loader_list.txt
 #                                                           data disk version: /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/loader_list.txt
 #   For Train_Test_Separator: the complete path to a h5 file to split into train-validation-test: /data/atlas/atlasdata3/mdraguet/Set2/HF/mc16aprocessed.h5
-absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
+absolute_data_path:                 /data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev_pure_matched_energy_chunked/energy_bin_100_200_quark_jets
+chunked_dataset:                    False                      # If true, the absolute_data_path (or the binary JUNIPR datapath) points to a text file with a list of tuple indicating chunk dataset and their size (do not add the .txt extension nor the train/test).
 fraction_data:                      1                         # Fraction of the data to load.
 test_size:                          0.2                       # Fraction of data to use for test
 equilibrate_data:                   True                      # Whether to guarantee same number of quark jets as gluon jets
@@ -32,7 +51,7 @@ cross_section_sampler:                                        # A cross section 
                                                               #         The final number may differ: rare processes are at least sampled once (increase number)
                                                               #         and if too many samples are asked, the demand is trimmed to what is available.
 
-# Model to implement (BDT, NN, Junipr ...) or method to run (UpRootTransformer, GranularUpRootTransformer, Train_Test_Separator ...)
+# Model to implement (BDT, NN, or Junipr) or method to run (UpRootTransformer, GranularUpRootTransformer, Train_Test_Separator ...)
 # Warning, this is case sensitive
 experiment_type:                    Junipr
 
@@ -43,17 +62,19 @@ NN_Model:
     lr:                             0.001
     lr_scheduler:                   True
     dropout_proba:                  0
-    epoch:                          10
-    batch_size:                     128
+    epoch:                          2
+    batch_size:                     200
+    validation_size:                0.1                       # Portion of the test set to analyse during training to monitor learning.
+    extract_BDT_info:               False                     # If the data has a BDT info in it, extract it for comparison (not used for training)
     loss_function:                  BCE_log                   # Loss function to use: BCE_log (binary-cross entropy with logit), BCE (same without the sigmoid)
     initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
-    test_frequency:                 100                       # Frequency of test error estimation during traing (for plotting purpose)
+    test_frequency:                 500                       # Frequency of test error estimation during traing (for plotting purpose)
     optimiser:
         type:                       adam
-        params:                     [0.9, 0.999, 0.00000001]  # Parameters of the optimiser: should be general enough but could be optimised.
-        weight_decay:               0.0000001                   # Weight decay for L2 regularisation
+        params:                     [0.9, 0.999, 0.0001]      # Parameters of the optimiser: should be general enough but could be optimised.
+        weight_decay:               0.0001                    # Weight decay for L2 regularisation
     NeuralNet:
-        input_dimensions:           [14, 32, 32, 1]
+        input_dimensions:           [11, 32, 32, 1]           # First dimension: 14 for Set 1 to 3 but 11 for Set 5
         nonlinearity:               relu                      # relu, elu, tanh, sigmoid, identity
         end_nonlinearity:           identity                  # relu, elu, tanh, sigmoid, identity
 
@@ -63,101 +84,103 @@ BDT_model:                                                    # For AdaBoostClas
     max_depth:                      3                         # Maximal dept of the base estimator (decision tree)
     lr:                             0.15                      # Learning rate
     grid_search:                    False                     # Whether to perform grid search
+    extract_BDT_info:               False                     # If the data has a BDT info in it, extract it for comparison (not used for training)
 
 Junipr_Model:
-    binary_runner_bool:             False                      # If true, will load two models (as specified in binary_runner) to perform a binarised-version of Junipr
-    train:                          True                       # If true, train the model
-    assess:                         False                      # If true, assess the model
-    load:                           False                      # If true, load a model as specified from the following list:
+    binary_runner_bool:             False                     # If true, will load two models (as specified in binary_runner) to perform a binarised-version of Junipr
+    train:                          True                      # If true, train the model
+    assess:                         False                     # If true, assess the model
+    load:                           False                     # If true, load a model as specified from the following list:
     loading:
-        pre_trained_epochs:     13                          # Number of epochs the unary model has already been trained on (for binary, see next list).
-        load_model_path:        /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-04-17-43-26/gluon_50e_200b_secondI_fb/saved_JUNIPR_weights.pt
-        load_model_config:      /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-04-17-43-26/gluon_50e_200b_secondI_fb/config.yaml
-        #  load_model_path:        data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/gluon_35e_200b_firstI_ppl_with_reload_5_25/saved_JUNIPR_weights.pt
-        #     load_model_config:      /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/gluon_35e_200b_firstI_ppl_with_reload_5_25/config.yaml
+        pre_trained_epochs:         0                         # Number of epochs the unary model has already been trained on (for binary, see next list).
+        previously_trained_number_steps: 0
+        #load_model_path:            /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-09-18-33-17/model1/saved_JUNIPR_weights.pt
+        #load_model_config:          /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-09-18-33-17/model1/config.yaml
+        load_model_path:            /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/quark_6e_bsSCHED_lrSCHED_thirdI_comMdata/saved_JUNIPR_weights.pt
+        load_model_config:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/quark_6e_bsSCHED_lrSCHED_thirdI_comMdata/config.yaml
     binary_runner:                                             # Paths to the two models for binary Junipr.
         pre_trained_epochs:         0                          # Previously trained number of epochs (of the binary objective, not the unary ones)
-        gluon_data_path:            /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_364704_Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW_deriv_DAOD_JETM6
-        quark_data_path:            /data/atlas/atlasdata3/mdraguet/Set4_quark_gluon_ppl/junipr/mc16_13TeV_410470_PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_deriv_DAOD_JETM6
-        # Note that these two data paths each require a _train.json and .test.json files
-        quark_model_path:           /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_ppl_20e_400b_g50e_g50e_with_final_BCE/quark_model/saved_JUNIPR_weights.pt
-        quark_config_path:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_ppl_20e_400b_g50e_g50e_with_final_BCE/quark_model/config.yaml
-        gluon_model_path:           /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_ppl_20e_400b_g50e_g50e_with_final_BCE/gluon_model/saved_JUNIPR_weights.pt
-        gluon_config_path:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_ppl_20e_400b_g50e_g50e_with_final_BCE/gluon_model/config.yaml
+        end_BCE_bool:               True                       # Whether or not to do binary cross entropy of the sigmoid of different of log likelihood with true label
+        gluon_data_path:            /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/gluon_jets_comMdata/
+        quark_data_path:            /data/atlas/atlasdata3/mdraguet/Code/Data/Set4/quark_jets_comMdata/
+        quark_model_path:           /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_comMdata_16e_bsBJ_lr001_g16e_q16e_thirdI_BCE/quark_model/saved_JUNIPR_weights.pt
+        quark_config_path:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_comMdata_16e_bsBJ_lr001_g16e_q16e_thirdI_BCE/quark_model/config.yaml
+        gluon_model_path:           /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_comMdata_16e_bsBJ_lr001_g16e_q16e_thirdI_BCE/gluon_model/saved_JUNIPR_weights.pt
+        gluon_config_path:          /data/atlas/atlasdata3/mdraguet/Code/Experiments/Results/saved_junipr_models/binary_model_comMdata_16e_bsBJ_lr001_g16e_q16e_thirdI_BCE/gluon_model/config.yaml
 
 #gluon_data_path: ../example_JUNIPR_2
 #quark_data_path: ../example_JUNIPR_1
-#quark_model_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-02-20-41-39/model1/saved_JUNIPR_weights.pt
-#quark_config_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-02-20-41-39/model1/config.yaml
-#gluon_model_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-02-20-42-10/model2/saved_JUNIPR_weights.pt
-#gluon_config_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-02-20-42-10/model2/config.yaml
+#quark_model_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-09-18-33-17/model1/saved_JUNIPR_weights.pt
+#quark_config_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-09-18-33-17/model1/config.yaml
+#gluon_model_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-09-18-49-51/model2/saved_JUNIPR_weights.pt
+#gluon_config_path: /Users/goormans/Desktop/Oxford/Project/Code/Experiments/Results/2020-08-09-18-49-51/model2/config.yaml
 
-    assess_number_of_jets:          10                        # Number of jet tree to produce in assessing
+    assess_number_of_jets:          20                        # Number of jet tree to produce in assessing
     Junipr_Dataset:
         padding_size:               120                       # Padded target size for all tensors to be batched to the recurrence (the real size is stored in n_branching)
         padding_value:              0.0                       # The padded-value.
         feature_scaling_parameters: [600.0, 0.1, 1.571, 0.01] # [E_jet, E_sub, R_jet, R_sub] used for scaling values. 1.571 value for R_jet is pi/2
         granularity:                10                        # To bin the values of branches
-        validation_size:            0.2                       # Part of the test set to be taken aside for validation (in training loop)
+        validation_size:            0.05                      # Part of the test set to be taken aside for validation (in training loop) (usually 0.2 but 0.05 for the very large dataset )
     lr:                             0.001
-    lr_scheduler:                   5epochsJL                 # Choices are : 5epochsJ, 5epochsJL, 5epochsD, 5epochsDL (D is for down, L for long)
-    batch_scheduler:                junipr_unary_LONG         # Choices are : junipr_paper_binary, junipr_unary_LONG or none
-    epoch:                          50
-    batch_size:                     200
+    lr_scheduler:                   1epochJS_EXTRA           # Choices are : 5epochsJ, 5epochsJL, 1epochJS, 1epochJS_EXTRA, 5epochsD, 5epochsDL, special_binary (D is for down, L for long, and S for short)
+    batch_scheduler:                junipr_unary_SHORT       # Choices are : junipr_binary, junipr_unary_LONG, junipr_unary_SHORT, junipr_binary_DOUBLE or none
+    epoch:                          16
+    batch_size:                     400
+    num_workers:                    0                         # Number of worker to use for processing batches. WARNING: chunked dataset forces this to be 0.
     initialisation:                 xavier_normal             # Initialisation of weights: xavier_uniform or xavier_normal
-    test_frequency:                 200                       # Frequency of test error estimation during traing (for plotting purpose)
+    test_frequency:                 800                       # test_frequency x 200 is the number of samples to process before doing a test loop (also fed in the logger). Typically 200 for unary and 400 for binary (except for larger dataset where it is recommended to double these numbers).
     optimiser:
         type:                       adam
-        params:                     #[0.9, 0.999, 0.00000001]  # Parameters of the optimiser: should be general enough but could be optimised. NO LONGER SPECIFIED.
-        weight_decay:               #0.0000001                 # Weight decay for L2 regularisation NO LONGER SPECIFIED
+        params:                     #[0.9, 0.999, 0.00000001] # Parameters of the optimiser: should be general enough but could be optimised. NO LONGER SPECIFIED.
+        weight_decay:               #0.0000001                # Weight decay for L2 regularisation
 
     Structure:
         branch_structure:           multiple                  # Takes value "unique" or "multiple". Descibes the number of network in the branch mapping
         Recurrent:                                            # Describe the RNN network
             RNN_type:               lstm                      # RNN cell to use: lstm or rnn
             Init:                                             # Parameters of the NN mapping seed-momenta -> initial hidden-state
-                input_dimensions:   [4, 30]                   # WARNING, second number must agree with hidden_dimension of Recurrent
+                input_dimensions:   [4, 40]                   # WARNING, second number must agree with hidden_dimension of Recurrent
                 initialisation:     xavier_normal
                 nonlinearity:       tanh                      # if one layer, only end_nonlinearity matters
                 end_nonlinearity:   tanh                      # needs to be specified as the output is part of the input of RNN
             input_dimensions:       8                         # size of the input data (the input of the RNN is input+hidden)
-            hidden_dimensions:      30                        #
-            initialisation:         xavier_normal             #
-            nonlinearity:           tanh                      #
+            hidden_dimensions:      40                        # Will be enforced everywhere if there is a mismatch
+            nonlinearity:           tanh
         JuniprEnd:
-            input_dimensions:       [30, 10, 1]               # WARNING: First dimension has to agree with Recurrent/hidden_dimensions
+            input_dimensions:       [40, 20, 1]               # WARNING: First dimension has to agree with Recurrent/hidden_dimensions
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a sigmoid itself
         JuniprMother:
-            input_dimensions:       [30, 10, 120]             # WARNING: First dimension has to agree with Recurrent/hidden_dimensions/ and third with padding size
+            input_dimensions:       [40, 20, 120]             # WARNING: First dimension has to agree with Recurrent/hidden_dimensions/ and third with padding size
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
         # Next one for Unique branch
         JuniprBranch:
-            input_dimensions:       [34, 10, 40]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+4 and third with 4*granularity
+            input_dimensions:       [44, 20, 40]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+4 and third with 4*granularity
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a the log softmax(es) itself
         # The four next ones for Multiple branch. For each of these, third dimensions needs to agree with granularity
         JuniprBranchZ:
-            input_dimensions:       [34, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother and last with granularity
+            input_dimensions:       [44, 20, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother and last with granularity
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
         JuniprBranchT:
-            input_dimensions:       [35, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother + 1 and last with granularity
+            input_dimensions:       [45, 20, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother + 1 and last with granularity
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
         JuniprBranchD:
-            input_dimensions:       [36, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother + 2 and last with granularity
+            input_dimensions:       [46, 20, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother + 2 and last with granularity
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
         JuniprBranchP:
-            input_dimensions:       [37, 10, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother +  3 and last with granularity
+            input_dimensions:       [47, 20, 10]              # WARNING: First dimension has to agree with Recurrent/hidden_dimensions+mother +  3 and last with granularity
             initialisation:         xavier_normal             #
             nonlinearity:           relu                      #
             end_nonlinearity:       identity                  # identity since loss function used applied a log softmax itself
@@ -181,21 +204,23 @@ UpRootTransformer:
     to_HDF5:                        True                                     # Save to HDF5
 
 GranularUpRootTransformer:
-    save_path:                      /data/atlas/atlasdata3/mdraguet/Set4_quark_complete_junipr_sub/    # where to store the result
-    save_tables:                    False                                    # Whether to store the intermediary tables of constituents and jets (format define below)
+    save_path:                      /data/atlas/atlasdata3/mdraguet/Set4_dijet_ttbar_esub05gev_H5/    # where to store the result
+    save_tables:                    True                                     # Whether to store the final tables of cjets (format define below)
     clean_jets:                     True                                     # Bool to clean the jets
     to_CSV:                         False                                    # Save to CSV
     to_HDF5:                        True                                     # Save to HDF5
-    JUNIPR_transform:               True                                     # Do the JUNIPR transform
+    JUNIPR_transform:               False                                    # Do the JUNIPR transform
     JUNIPR_cluster_algo:            cambridge                                # The clustering algorithm to use
     JUNIPR_cluster_radius:          0.5                                      # The radius to use in clustering algorithm
-    save_JUNIPR_transform:          True                                     # Save the result into a json file
+    save_JUNIPR_transform:          False                                    # Save the result into a json file
     cut_train_test:                 True                                     # If true, will separate the json files created into a train and a test one (for each root files fed)
     test_size:                      0.2                                      # If this the case, fraction of the data to be used for the test_size
     add_cut:                        None                                     # Whether to add a further cut: isolate_q_truth, isolate_g_truth, pt_above_peak, pt_below_peak (peak at 300 GeV)
-#special_cut_junipr:
-#   special_cut_bool:           True                                     # Whether to perform a special cut on constituents and R to jet
-#   param:                      [0.5, 0.05]                              # The parameters of the special cut: E_sub followed by R_sub. Any constituents below is removed
+    purify_cut:                     False                                    # Whether to purify the label of the data
+    purify_cut_val:                 2                                        # 0 for gluon pure, 1 for quark pure.
+    energy_histogram_limitor:       False                                    # Whether to restrict the data to match a certain energy histogram at the path indicated next.
+    energy_histogram_limitor_path:  /data/atlas/atlasdata3/mdraguet/energy_histogram_comMdata.txt
+
 
 Train_Test_Separator:
     save_path:                      /data/atlas/atlasdata3/mdraguet/Set3/HF/Separated/

@@ -44,7 +44,7 @@ if __name__ == "__main__":
     experiment_parameters.set_property("log_path", log_path)
     experiment_parameters.set_property("experiment_timestamp", exp_timestamp)
     experiment_parameters.set_property("df_log_path", os.path.join(log_path, 'data_logger.csv'))
-
+    
     # Set a seed value to packages with non-deterministic initialisaiton for reproducibility
     import random
     import numpy as np
@@ -54,25 +54,25 @@ if __name__ == "__main__":
     np.random.seed(seed_value)
     torch.manual_seed(seed_value)
     experiment_parameters._config["seed"] = seed_value
-
+    
     if experiment_parameters.get(["experiment_type"]) == "BDT":
         experiment_parameters.save_configuration(log_path)
         runner = Models.BDTRunner(config=experiment_parameters)
-
+    
     elif experiment_parameters.get(["experiment_type"]) == "NN":
         experiment_parameters.save_configuration(log_path)
         runner = Models.NNRunner(config=experiment_parameters)
-
+    
     elif experiment_parameters.get(["experiment_type"]) == "Junipr":
         experiment_parameters.save_configuration(log_path)
         runner = Models.JuniprRunner(config=experiment_parameters)
-
+    
     elif experiment_parameters.get(["experiment_type"]) == "Multi_model":
         runner =  Models.MultimodalRunner(config=experiment_parameters)
-
+    
     elif experiment_parameters.get(["experiment_type"]) == "UpRootTransformer":
         runner = DataLoaders.UpRootTransformer(config=experiment_parameters)
-
+    
     elif experiment_parameters.get(["experiment_type"]) == "GranularUpRootTransformer":
         runner = DataLoaders.GranularUpRootTransformer(config=experiment_parameters)
 

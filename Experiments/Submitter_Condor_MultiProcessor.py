@@ -34,7 +34,8 @@ if __name__ == "__main__":
                       "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_Part2_esub1gev/batch1",
                       "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_Part2_esub1gev/batch1"]
     """
-    # This is to process the dijet in //.
+    """
+    # This is to process the dijet ESUB 1 GeV in //.
     list_files = ["/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB1gev/mc16_13TeV.364700.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ0WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
                   "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB1gev/mc16_13TeV.364701.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ1WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
                   "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB1gev/mc16_13TeV.364702.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ2WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
@@ -61,6 +62,52 @@ if __name__ == "__main__":
                       "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub1gev/",
                       "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub1gev/",
                       ]
+    """
+    """
+    # This is to process the dijet ESUB 0.5 GeV in //.
+    list_files = ["/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364700.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ0WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364701.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ1WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364702.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ2WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364703.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ3WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364704.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ4WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364705.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ5WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364706.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ6WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364707.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ7WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364709.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ9WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364710.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ10WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364711.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ11WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_gluon_ESUB05gev/mc16_13TeV.364712.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ12WithSW.deriv.DAOD_JETM6.e7142_e5984_s3126_r9364_r9315_p4128.root"]
+        
+    list_save_path = ["/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_dijet_esub05gev/",
+                      ]
+    """
+    
+    
+    list_files = ["/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_quark_ESUB05gev/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH1.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_quark_ESUB05gev/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH2.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_quark_ESUB05gev/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH3.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_quark_ESUB05gev/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH4.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_quark_ESUB05gev/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH5.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128.root",
+                  "/data/atlas/atlasdata3/mdraguet/RawProcessedGranularData/junipr_quark_ESUB05gev/mc16_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad_BATCH6.deriv.DAOD_JETM6.e6337_e5984_s3126_r9364_r9315_p4128.root"]
+
+
+    list_save_path = ["/data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev/batch1/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev/batch2/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev/batch3/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev/batch4/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev/batch5/",
+                      "/data/atlas/atlasdata3/mdraguet/Set4_ttbar_esub05gev/batch6/"]
     
     print("Number of CPU's available : ", mp.cpu_count())
     """
