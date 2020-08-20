@@ -30,7 +30,6 @@ from .RecurrentNetwork import RecurrentNetwork
 
 class JuniprNetwork(_BaseNetwork):
     def __init__(self, config: Dict):
-        print("In init Junipr")
         self.extract_parameters(config)
         _BaseNetwork.__init__(self, config=config)
         self.setup_Model(config)
@@ -111,8 +110,10 @@ class JuniprNetwork(_BaseNetwork):
         # As a weird effect of interleaving the tensor entries (batch_sample1, batch_sample2, ... batch_sampleX, and again)
         
         first_hidden_states_unshaped = self.seed_momenta_to_hidden_network(seed_momenta)
+        #print("first_hidden_states_unshaped: ", first_hidden_states_unshaped.grad_fn)
         # Needs a dimension tweak
         first_hidden_states = first_hidden_states_unshaped[None, :, :]
+        #print("first_hidden_states_unshaped: ", first_hidden_states_unshaped.grad_fn)
         #print("In junipr network, size of first_hidden_states: {}".format(first_hidden_states.size()))
         if self.RNN_type == "lstm":
             first_c_states = self.seed_momenta_to_c0_network(seed_momenta)
@@ -122,14 +123,19 @@ class JuniprNetwork(_BaseNetwork):
             hidden_states_packed, last_hiddens = self.recurrent_network(daughters_momenta_PACK, first_hidden_states)
         #print("\nIn junipr network, hidden output: {}\n".format(hidden_states))
         #print("In junipr network, last hidden output: {}".format(last_hiddens.size()))
+        #print("hidden_states_packed: ", hidden_states_packed.grad_fn)
         hidden_states_unpacked, _ = rnn.pad_packed_sequence(hidden_states_packed, batch_first=True)
+        #print("hidden_states_unpacked: ", hidden_states_unpacked.grad_fn)
         #print("In junipr network, hidden output UNPACKED size: {}".format(hidden_states.size()))
         #print("first_hidden_states \n",first_hidden_states)
         #first_hidden_states_reshaped = torch.reshape(first_hidden_states, (first_hidden_states.size()[1], 1, first_hidden_states.size()[2]))
         first_hidden_states_reshaped = first_hidden_states.view(first_hidden_states.size()[1], 1, first_hidden_states.size()[2])
+        #print("first_hidden_states_reshaped: ", first_hidden_states_reshaped.grad_fn)
         #print("hidden_states \n",hidden_states)
         #print("In junipr network, size of hidden_states: {}".format(hidden_states.size()))
         hidden_states = torch.cat([first_hidden_states_reshaped, hidden_states_unpacked], dim = 1)
+        #print("hidden_states: ", hidden_states.grad_fn)
+        
         trimmed_padding_size = hidden_states.size()[1]
         #print("hidden_states after cat \n",hidden_states)
         #print("In junipr network, size of hidden_states after cat: {}".format(hidden_states.size()))
@@ -138,13 +144,16 @@ class JuniprNetwork(_BaseNetwork):
         # Take back the last configuration in order to do this.
         #print("last_daughters_momenta \n", last_daughters_momenta.size())
         last_daughters_momenta = last_daughters_momenta[:, None, :]
+        #print("last_daughters_momenta: ", last_daughters_momenta.grad_fn)
         #print("last_daughters_momenta tweaked \n", last_daughters_momenta.size())
         if self.RNN_type == "lstm":
             _, (last_hidden_states_unshaped, _) = self.recurrent_network(last_daughters_momenta, last_hiddens, last_c_states)
         else:
             _, last_hidden_states_unshaped = self.recurrent_network(last_daughters_momenta, last_hiddens)
             #last_hidden_states = torch.reshape(last_hidden_states_unshaped, (last_hidden_states_unshaped.size()[1], 1, last_hidden_states_unshaped.size()[2]))
+            #print("last_hidden_states_unshaped: ", last_hidden_states_unshaped.grad_fn)
         last_hidden_states = last_hidden_states_unshaped.view(last_hidden_states_unshaped.size()[1], 1, last_hidden_states_unshaped.size()[2])
+        #print("last_hidden_states: ", last_hidden_states.grad_fn)
         #print("first_hidden_states : ", first_hidden_states.size())
         #print("hidden_states : ", hidden_states.size())
         #print("last_hiddens : ", last_hidden_states.size())
@@ -163,15 +172,17 @@ class JuniprNetwork(_BaseNetwork):
         # should find a way of concatenating output_end and output_very_end along the seq dimension
         
         output_mother_unbalance = self.p_mother_network(hidden_states)[:, :trimmed_padding_size, :trimmed_padding_size]
-        
+        #print("output_mother_unbalance: ", output_mother_unbalance.grad_fn)
         #lower_triangular_ones = torch.tril(torch.tensor(np.ones((trimmed_padding_size, trimmed_padding_size)))).float()
         #tensor_dismiss_impossible_mothers = torch.where(lower_triangular_ones != 0, torch.tensor([0.0]), torch.tensor([float('-inf')]))
         #tensor_dismiss_impossible_mothers = tensor_dismiss_impossible_mothers[None, :, :].detach()
         
         remove_nasty_values = self.dismiss_impossible_mothers[:, :trimmed_padding_size, :trimmed_padding_size].repeat(output_mother_unbalance.size()[0], 1, 1).detach()
+        #print("remove_nasty_values: ", remove_nasty_values.grad_fn)
         #remove_nasty_values = tensor_dismiss_impossible_mothers.repeat(output_mother_unbalance.size()[0], 1, 1).detach()
         #print("output_mother_unbalance \n",output_mother_unbalance)
         output_mother = output_mother_unbalance + remove_nasty_values
+        #print("output_mother: ", output_mother.grad_fn)
         #print("output_mother \n",output_mother)
     
         #print("In junipr network, output mother branch size: {}".format(output_mother.size()))
@@ -230,7 +241,13 @@ class JuniprNetwork(_BaseNetwork):
             #print("In junipr network, output_branch_t size: {}".format(output_branch_t.size()))
             #print("In junipr network, output_branch_p size: {}".format(output_branch_p.size()))
             #print("In junipr network, output_branch_d size: {}".format(output_branch_d.size()))
-
+        #print("output_end :      ",output_end.grad_fn)
+        #print("output_very_end : ",output_very_end.grad_fn)
+        #print("output_mother :   ",output_mother.grad_fn)
+        #print("output_branch_z : ",output_branch_z.grad_fn)
+        #print("output_branch_t : ",output_branch_t.grad_fn)
+        #print("output_branch_p : ",output_branch_p.grad_fn)
+        #print("output_branch_d : ",output_branch_d.grad_fn)
         
         # Join the outputs and return
         output_dictionnary = dict()

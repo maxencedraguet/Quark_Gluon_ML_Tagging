@@ -16,7 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from DataLoaders import DataLoader_Set1, DataLoader_Set2, DataLoader_Set4
+from DataLoaders import DataLoader_Set1, DataLoader_Set2, DataLoader_Set4, DataLoader_Set5
 
 class _BaseRunner(ABC):
     def __init__(self, config: Dict) -> None:
@@ -34,6 +34,8 @@ class _BaseRunner(ABC):
             self.dataloader = DataLoader_Set1(config)
         if self.dataset == "Set2":
             self.dataloader = DataLoader_Set2(config)
+        if self.dataset == "Set5":
+            self.dataloader = DataLoader_Set5(config)
         self.data = self.dataloader.load_separate_data()
 
     def run(self):

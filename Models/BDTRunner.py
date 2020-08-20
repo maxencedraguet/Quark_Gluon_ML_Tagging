@@ -54,6 +54,7 @@ class BDTRunner(_BaseRunner):
         self.base_estimator = config.get(["BDT_model", "base_estimator"])
         self.max_depth = config.get(["BDT_model", "max_depth"])
         self.lr = config.get(["BDT_model", "lr"])
+        self.extract_BDT_info = config.get(["NN_Model", "extract_BDT_info"])
         
         if self.base_estimator == "DecisionTreeClassifier" and self.max_depth:
             self.base_estimator = DecisionTreeClassifier(max_depth = self.max_depth)
@@ -105,13 +106,17 @@ class BDTRunner(_BaseRunner):
         # ROC curve
         write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_BDT.txt'),
                        self.data["output_test"], self.data["test_predictions_proba"][:,1])
-        write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_given_BDT.txt'),
-                        self.data["output_test"], self.data["output_BDT_test"])
+        if self.extract_BDT_info:
+            write_ROC_info(os.path.join(self.result_path, 'test_label_pred_proba_given_BDT.txt'),
+                            self.data["output_test"], self.data["output_BDT_test"])
         false_pos_rate, true_pos_rate, thresholds = metrics.roc_curve(self.data["output_test"], self.data["test_predictions_proba"][:,1])
-        false_pos_rateBDT, true_pos_rateBDT, thresholdsBDT = metrics.roc_curve(self.data["output_test"], self.data["output_BDT_test"])
+        if self.extract_BDT_info:
+            false_pos_rateBDT, true_pos_rateBDT, thresholdsBDT = metrics.roc_curve(self.data["output_test"], self.data["output_BDT_test"])
         AUC_test = metrics.auc(false_pos_rate, true_pos_rate)
-        AUC_test_BDT = metrics.auc(false_pos_rateBDT, true_pos_rateBDT)
-        print("AUC on test set for own BDT is {0} and for given one {1}".format(AUC_test, AUC_test_BDT))
+        print("AUC on test set for own BDT is {0}".format(AUC_test))
+        if self.extract_BDT_info:
+            AUC_test_BDT = metrics.auc(false_pos_rateBDT, true_pos_rateBDT)
+            print("AUC on test set for given BDT {1}".format(AUC_test_BDT))
 
         # Plot the ROC curve
         plt.figure()
