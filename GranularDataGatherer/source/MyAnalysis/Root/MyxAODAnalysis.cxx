@@ -300,6 +300,22 @@ StatusCode MyxAODAnalysis :: execute ()
 
   //Loop over the shallow copied jets.
   for (auto jet : *jets_nominal) {
+    //Truth information.
+    if (isMC) {
+         int partonID_value = jet->getAttribute<int>("PartonTruthLabelID");
+         if (partonID_value > 0 && partonID_value <= 6) {
+             continue;
+             isTruthQuark->push_back(1);
+         }
+         if (partonID_value == 21) {
+             isTruthQuark->push_back(0);
+         }
+         if (partonID_value == -1) {
+             continue;
+             isTruthQuark->push_back(-1);
+         }
+         partonID->push_back(partonID_value);
+    }
     //Jet quality and tagging quantities.
     isBadJet->push_back(cacc_bad(*jet));
     isBaselineJet->push_back(cacc_baseline(*jet));
@@ -320,21 +336,6 @@ StatusCode MyxAODAnalysis :: execute ()
     m_jetWidth->push_back(jet->getAttribute<float>("Width"));
     m_jetMass->push_back(jet->m());
     m_jetCount->push_back (counter_jet); //To control constituent-jet matching.
-
-    //Truth information.
-    if (isMC) {
-      int partonID_value = jet->getAttribute<int>("PartonTruthLabelID");
-      if (partonID_value > 0 && partonID_value <= 6) {
-          isTruthQuark->push_back(1);
-      }
-      if (partonID_value == 21) {
-          isTruthQuark->push_back(0);
-      }
-      if (partonID_value == -1) {
-          isTruthQuark->push_back(-1);
-      }
-      partonID->push_back(partonID_value);
-    }
 
     //Calculate jet charge fraction.
     m_jetChFrac->push_back(jet->getAttribute<std::vector<float>>("SumPtTrkPt500").at(pvIndex) / jet->pt());
@@ -394,7 +395,7 @@ StatusCode MyxAODAnalysis :: execute ()
         
         // These two are added for the sake of junipr: need lower border
         //if(dR < 0.05){ continue;}
-        if(en < 1){ continue;}
+        if(en < 0.5){ continue;}
         
         //hist ("h_deltaR")->Fill (dR);
         partDeltaR->push_back(dR);
