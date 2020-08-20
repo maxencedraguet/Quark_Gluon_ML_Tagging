@@ -43,38 +43,38 @@
 * Clearly every one of them is at saturation. "Worse" than this, the unaries are in fact learning their data distribution very well. Each pair of plot that follows is gluon left and quark right. 
     * end:
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_g/ending_distribution.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_q/ending_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_g/ending_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_q/ending_distribution.png" width="350" />
     </p>    
 
     * mother index:
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_g/mother_id_distribution.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_q/mother_id_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_g/mother_id_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_q/mother_id_distribution.png" width="350" />
     </p>    
 
     * z:
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_g/branch_z_distribution.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_q/branch_z_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_g/branch_z_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_q/branch_z_distribution.png" width="350" />
     </p>    
 
      * theta:
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_g/branch_theta_distribution.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_q/branch_theta_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_g/branch_theta_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_q/branch_theta_distribution.png" width="350" />
     </p>    
 
     * phi:
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_g/branch_phi_distribution.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_q/branch_phi_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_g/branch_phi_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_q/branch_phi_distribution.png" width="350" />
     </p>    
 
      * delta:
     <p float="center">
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_g/branch_delta_distribution.png" width="350" />
-    <img src="Readme_Result/ResultBDTNN/JUNIPR/probability_distributions_q/branch_delta_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_g/branch_delta_distribution.png" width="350" />
+    <img src="Readme_Result/ResultBDTNN/probability_distributions_q/branch_delta_distribution.png" width="350" />
     </p>    
 
 * The fact the model failed to deliver improved result is therefore not just a question of training. But surprisingly  the first result I had this week was extremely good. Running on a much smaller dataset (700k jets in total for both labels), no E sub cut and no energy matching, I had the following binary JUNIPR result (50 epochs training of unaries and 26 epochs training of binary)
