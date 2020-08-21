@@ -82,7 +82,14 @@
 <img src="Readme_Result/ResultBDTNN/OldJUNIPR/ROC_curve.png" width="600" />
 </p>
 
-* Here is the catch: the lack of energy matching between the quark and gluon. I believe it removes a lot of what the model uses to classify. Testing this model on the data with E sub 1 GeV and energy matching, the result obtained is far worse (left plot). On the contrary, testing the model that ran on 1 GeV E sub with energy matching on this smaller dataset, the result improved vastly (right).
+* Here is the catch: the lack of energy matching between the quark and gluon. Left is the distribution of energy used in the model above for dijet. Right is that used for the large dataset with E sub 1 GeV. 
+<p float="center">
+<img src="Readme_Result/ResultBDTNN/dijetE_fData.png" width="350" />
+<img src="Readme_Result/ResultBDTNN/dijetE_Matched.png" width="350" />
+</p>    
+
+
+I believe it removes a lot of what the model uses to classify. Testing this model on the data with E sub 1 GeV and energy matching, the result obtained is far worse (left plot). On the contrary, testing the model that ran on 1 GeV E sub with energy matching on this smaller dataset, the result improved vastly (right).
 <p float="center">
 <img src="Readme_Result/ResultBDTNN/special/ROC_curveFullOnCom.png" width="350" />
 <img src="Readme_Result/ResultBDTNN/special/ROC_curveComOnFull.png" width="350" />
