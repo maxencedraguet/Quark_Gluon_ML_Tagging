@@ -58,6 +58,7 @@
 * Still running: 
     * A larger network on set 4 (30 -> 40 size of hidden state + 20 units in hidden layers of DNN instead of 10)
     * A regular network on truth information.
+    * Collecting meta information on nodes to try to assess what's happening with bad nodes (look at their energy distribution, depth in the tree, ...)
 
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
