@@ -55,6 +55,10 @@
 <img src="Readme_Result/ROC_curve_100_200.png" width="700" />
 </p>    
 
+* Still running: 
+    * A larger network on set 4 (30 -> 40 size of hidden state + 20 units in hidden layers of DNN instead of 10)
+    * A regular network on truth information.
+
 
 [Notes on meetings.](https://docs.google.com/document/d/1mPCNGwLqUHwPWRzEXwxDVAvANspSMXEBrSzKO49E8Ds/edit?usp=sharing)
 
